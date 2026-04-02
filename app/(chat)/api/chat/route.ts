@@ -25,6 +25,7 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { webSearch } from "@/lib/ai/tools/web-search";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -84,18 +85,18 @@ export async function POST(request: Request) {
       ? selectedChatModel
       : DEFAULT_CHAT_MODEL;
 
-    await checkIpRateLimit(ipAddress(request));
+    // await checkIpRateLimit(ipAddress(request));
 
     const userType: UserType = session.user.type;
 
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 1,
-    });
+    // const messageCount = await getMessageCountByUserId({
+    //   id: session.user.id,
+    //   differenceInHours: 1,
+    // });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerHour) {
-      return new ChatbotError("rate_limit:chat").toResponse();
-    }
+    // if (messageCount > entitlementsByUserType[userType].maxMessagesPerHour) {
+    //   return new ChatbotError("rate_limit:chat").toResponse();
+    // }
 
     const isToolApprovalFlow = Boolean(messages);
 
@@ -205,6 +206,7 @@ export async function POST(request: Request) {
                   "editDocument",
                   "updateDocument",
                   "requestSuggestions",
+                  "webSearch",
                 ],
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
@@ -216,6 +218,7 @@ export async function POST(request: Request) {
           },
           tools: {
             getWeather,
+            webSearch,
             createDocument: createDocument({
               session,
               dataStream,

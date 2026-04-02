@@ -204,7 +204,14 @@ export type ReasoningContentProps = HTMLAttributes<HTMLDivElement> & {
 const streamdownPlugins = { cjk, code, math, mermaid };
 
 export const ReasoningContent = memo(
-  ({ className, children, ...props }: ReasoningContentProps) => {
+  ({
+    className,
+    children,
+    dir,
+    onAnimationStart,
+    onAnimationEnd,
+    ...props
+  }: ReasoningContentProps) => {
     const { isStreaming, isOpen } = useReasoning();
     const scrollRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
@@ -227,7 +234,11 @@ export const ReasoningContent = memo(
           ref={scrollRef}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          <Streamdown plugins={streamdownPlugins} {...props}>
+          <Streamdown
+            plugins={streamdownPlugins}
+            dir={dir as any}
+            {...props}
+          >
             {children}
           </Streamdown>
         </div>

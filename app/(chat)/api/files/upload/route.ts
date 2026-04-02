@@ -10,9 +10,21 @@ const FileSchema = z.object({
     .refine((file) => file.size <= 5 * 1024 * 1024, {
       message: "File size should be less than 5MB",
     })
-    .refine((file) => ["image/jpeg", "image/png"].includes(file.type), {
-      message: "File type should be JPEG or PNG",
-    }),
+    .refine(
+      (file) =>
+        [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "application/pdf",
+          "text/plain",
+          "text/csv",
+          "application/json",
+        ].includes(file.type),
+      {
+        message: "File type not supported. Please upload an image, PDF, or text file.",
+      }
+    ),
 });
 
 export async function POST(request: Request) {

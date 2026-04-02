@@ -1,11 +1,10 @@
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2-0905";
+export const DEFAULT_CHAT_MODEL = "google/gemini-2.5-flash";
 
-export const titleModel = {
-  id: "mistral/mistral-small",
-  name: "Mistral Small",
-  provider: "mistral",
+export const titleModel: ChatModel = {
+  id: "google/gemini-2.5-flash",
+  name: "Gemini 2.5 Flash",
+  provider: "google",
   description: "Fast model for title generation",
-  gatewayOrder: ["mistral"],
 };
 
 export type ModelCapabilities = {
@@ -24,6 +23,24 @@ export type ChatModel = {
 };
 
 export const chatModels: ChatModel[] = [
+  {
+    id: "google/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    provider: "google",
+    description: "Ultra-fast Gemini 2.5 for daily tasks",
+  },
+  {
+    id: "google/gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    provider: "google",
+    description: "Advanced Gemini 2.5 for complex reasoning",
+  },
+  {
+    id: "google/gemini-3.1-pro-preview",
+    name: "Gemini 3.1 Pro Preview",
+    provider: "google",
+    description: "Next-gen Gemini 3.1 with massive intelligence",
+  },
   {
     id: "deepseek/deepseek-v3.2",
     name: "DeepSeek V3.2",
@@ -58,6 +75,24 @@ export const chatModels: ChatModel[] = [
     provider: "moonshotai",
     description: "Moonshot AI flagship model",
     gatewayOrder: ["fireworks", "bedrock"],
+  },
+  {
+    id: "groq/llama-3.3-70b-versatile",
+    name: "Llama 3.3 70B",
+    provider: "groq",
+    description: "Ultra-fast Llama 3.3 for complex tasks",
+  },
+  {
+    id: "groq/mixtral-8x7b-32768",
+    name: "Mixtral 8x7B",
+    provider: "groq",
+    description: "Fast Mixtral model with long context",
+  },
+  {
+    id: "groq/llama3-70b-8192",
+    name: "Llama 3 70B",
+    provider: "groq",
+    description: "High-performance Llama 3 model",
   },
   {
     id: "openai/gpt-oss-20b",
@@ -106,19 +141,28 @@ export async function getCapabilities(): Promise<
               e.supported_parameters ?? []
           )
         );
-        const inputModalities = new Set(
+        const architectureInputModalities = new Set(
           json.data?.architecture?.input_modalities ?? []
         );
+
+        // Force vision and tools for Gemini, DeepSeek, and Groq models if not detected
+        const isGemini = model.id.includes("gemini");
+        const isDeepSeek = model.id.includes("deepseek");
+        const isGroq = model.id.includes("groq");
 
         return [
           model.id,
           {
-            tools: params.has("tools"),
-            vision: inputModalities.has("image"),
+            tools: params.has("tools") || isGemini || isDeepSeek || isGroq,
+            vision: architectureInputModalities.has("image") || isGemini,
             reasoning: params.has("reasoning"),
           },
         ];
       } catch {
+        // Fallback for Gemini models even on error
+        if (model.id.includes("gemini")) {
+          return [model.id, { tools: true, vision: true, reasoning: false }];
+        }
         return [model.id, { tools: false, vision: false, reasoning: false }];
       }
     })
