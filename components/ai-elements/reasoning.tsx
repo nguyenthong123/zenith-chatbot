@@ -233,10 +233,10 @@ export const ReasoningContent = memo(
           className="max-h-[200px] overflow-y-auto rounded-lg border border-border/20 bg-muted/30 px-3 py-2 text-[11px] leading-relaxed"
           ref={scrollRef}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          dir={dir}
         >
           <Streamdown
             plugins={streamdownPlugins}
-            dir={dir as any}
             {...props}
           >
             {children}
