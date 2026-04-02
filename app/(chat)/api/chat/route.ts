@@ -19,13 +19,13 @@ import {
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { checkPayouts } from "@/lib/ai/tools/check-payouts";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { webSearch } from "@/lib/ai/tools/web-search";
-import { checkPayouts } from "@/lib/ai/tools/check-payouts";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,

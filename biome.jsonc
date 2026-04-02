@@ -6,8 +6,14 @@
     "ultracite/biome/react"
   ],
   "formatter": {
+    "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2
+  },
+  "javascript": {
+    "formatter": {
+      "semicolons": "always"
+    }
   },
   "files": {
     "includes": [
@@ -22,9 +28,9 @@
   "linter": {
     "rules": {
       "suspicious": {
-        "noExplicitAny": "off",
+        "noExplicitAny": "warn",
+        "noConsole": "warn",
         "noUnknownAtRules": "off",
-        "noConsole": "off",
         "noBitwiseOperators": "off"
       },
       "style": {

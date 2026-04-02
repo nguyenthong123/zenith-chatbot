@@ -1,23 +1,31 @@
-import * as admin from "firebase-admin";
 import { tool } from "ai";
+import type { Query } from "firebase-admin/firestore";
 import { z } from "zod";
 import { db } from "@/lib/firebase/admin";
 
 export const checkPayouts = tool({
-  description: "Check affiliate payouts and sales data from Firestore for a specific user or affiliate.",
+  description:
+    "Check affiliate payouts and sales data from Firestore for a specific user or affiliate.",
   inputSchema: z.object({
-    affiliateName: z.string().optional().describe("The name of the affiliate to look up."),
-    affiliateEmail: z.string().optional().describe("The email of the affiliate to look up."),
+    affiliateName: z
+      .string()
+      .optional()
+      .describe("The name of the affiliate to look up."),
+    affiliateEmail: z
+      .string()
+      .optional()
+      .describe("The email of the affiliate to look up."),
   }),
   execute: async ({ affiliateName, affiliateEmail }) => {
     if (!db) {
       return {
-        error: "Firebase Admin is not initialized. Please check your credentials.",
+        error:
+          "Firebase Admin is not initialized. Please check your credentials.",
       };
     }
 
     try {
-      let query: admin.firestore.Query = db.collection("affiliate_payouts");
+      let query: Query = db.collection("affiliate_payouts");
 
       if (affiliateEmail) {
         query = query.where("affiliateEmail", "==", affiliateEmail);
