@@ -1,4 +1,4 @@
-import { geolocation, ipAddress } from "@vercel/functions";
+import { geolocation } from "@vercel/functions";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -11,7 +11,6 @@ import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
   allowedModelIds,
   chatModels,
@@ -85,18 +84,12 @@ export async function POST(request: Request) {
       ? selectedChatModel
       : DEFAULT_CHAT_MODEL;
 
-    // await checkIpRateLimit(ipAddress(request));
-
     const userType: UserType = session.user.type;
 
     // const messageCount = await getMessageCountByUserId({
     //   id: session.user.id,
     //   differenceInHours: 1,
     // });
-
-    // if (messageCount > entitlementsByUserType[userType].maxMessagesPerHour) {
-    //   return new ChatbotError("rate_limit:chat").toResponse();
-    // }
 
     const isToolApprovalFlow = Boolean(messages);
 
