@@ -41,17 +41,18 @@ export const webSearch = tool({
       }
 
       const data = await response.json();
-      
+
       // Return structured results for the AI
       return {
         query: data.query,
         answer: data.answer,
-        results: data.results?.map((source: any) => ({
-          title: source.title,
-          url: source.url,
-          content: source.content,
-          score: source.score,
-        })) ?? [],
+        results:
+          data.results?.map((source: any) => ({
+            title: source.title,
+            url: source.url,
+            content: source.content,
+            score: source.score,
+          })) ?? [],
       };
     } catch (error) {
       return {

@@ -22,7 +22,8 @@ const FileSchema = z.object({
           "application/json",
         ].includes(file.type),
       {
-        message: "File type not supported. Please upload an image, PDF, or text file.",
+        message:
+          "File type not supported. Please upload an image, PDF, or text file.",
       }
     ),
 });
