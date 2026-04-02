@@ -25,6 +25,7 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { webSearch } from "@/lib/ai/tools/web-search";
+import { checkPayouts } from "@/lib/ai/tools/check-payouts";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -196,6 +197,7 @@ export async function POST(request: Request) {
                   "updateDocument",
                   "requestSuggestions",
                   "webSearch",
+                  "checkPayouts",
                 ],
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
@@ -224,6 +226,7 @@ export async function POST(request: Request) {
               dataStream,
               modelId: chatModel,
             }),
+            checkPayouts,
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
