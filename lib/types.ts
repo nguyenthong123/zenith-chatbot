@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { createDocument } from "./ai/tools/create-document";
 import type { getWeather } from "./ai/tools/get-weather";
+import type { readPdf } from "./ai/tools/read-pdf";
+import type { readUrl } from "./ai/tools/read-url";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
 import type { Suggestion } from "./db/schema";
@@ -19,12 +21,16 @@ type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type requestSuggestionsTool = InferUITool<
   ReturnType<typeof requestSuggestions>
 >;
+type readUrlTool = InferUITool<typeof readUrl>;
+type readPdfTool = InferUITool<typeof readPdf>;
 
 export type ChatTools = {
   getWeather: weatherTool;
   createDocument: createDocumentTool;
   updateDocument: updateDocumentTool;
   requestSuggestions: requestSuggestionsTool;
+  readUrl: readUrlTool;
+  readPdf: readPdfTool;
 };
 
 export type CustomUIDataTypes = {

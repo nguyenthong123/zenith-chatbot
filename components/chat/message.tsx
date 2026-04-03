@@ -59,7 +59,8 @@ const PurePreviewMessage = ({
       (part.type === "reasoning" &&
         "text" in part &&
         part.text?.trim().length > 0) ||
-      part.type.startsWith("tool-"),
+      part.type.startsWith("tool-") ||
+      part.type.startsWith("call-"),
   );
   const isThinking = isAssistant && isLoading && !hasAnyContent;
 
@@ -298,6 +299,32 @@ const PurePreviewMessage = ({
             )}
           </ToolContent>
         </Tool>
+      );
+    }
+    if (
+      type.startsWith("tool-check") ||
+      type.startsWith("call-check") ||
+      type === "tool-readUrl" ||
+      type === "tool-readPdf"
+    ) {
+      const toolPart = part as any;
+      const { toolCallId, state } = toolPart;
+      const toolName = type.split("-").slice(1).join("-");
+
+      return (
+        <div className="w-[min(100%,450px)]" key={toolCallId}>
+          <Tool className="w-full" defaultOpen={state === "output-available"}>
+            <ToolHeader state={state} toolName={toolName} type="dynamic-tool" />
+            <ToolContent>
+              {state === "output-available" && (
+                <ToolOutput errorText={undefined} output={toolPart.output} />
+              )}
+              {(state === "input-available" || state === "input-streaming") && (
+                <ToolInput input={toolPart.input} />
+              )}
+            </ToolContent>
+          </Tool>
+        </div>
       );
     }
 

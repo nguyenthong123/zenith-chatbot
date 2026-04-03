@@ -1,0 +1,534 @@
+▲ Next.js 16.2.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.9:3000
+- Environments: .env
+✓ Ready in 416ms
+- Cache Components enabled
+- Experiments (use with caution):
+  ✓ appNewScrollHandler
+  ✓ cachedNavigations
+  ✓ inlineCss
+  ✓ prefetchInlining
+
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Database error in saveChat: Error: Failed query: insert into "Chat" ("id", "createdAt", "title", "userId", "visibility") values ($1, $2, $3, $4, $5)
+params: 4826b74e-5bb6-46c5-9c5e-50239bae1e18,2026-04-03T07:14:32.547Z,New chat,2f60768a-eea6-4531-b4ed-c5a2c9a6cf77,private
+    at async saveChat (lib/db/queries.ts:91:12)
+    at async POST (app/(chat)/api/chat/route.ts:113:7)
+  89 | }) {
+  90 |   try {
+> 91 |     return await db.insert(chat).values({
+     |            ^
+  92 |       id,
+  93 |       createdAt: new Date(),
+  94 |       userId, {
+  query: 'insert into "Chat" ("id", "createdAt", "title", "userId", "visibility") values ($1, $2, $3, $4, $5)',
+  params: [
+    '4826b74e-5bb6-46c5-9c5e-50239bae1e18',
+    '2026-04-03T07:14:32.547Z',
+    'New chat',
+    '2f60768a-eea6-4531-b4ed-c5a2c9a6cf77',
+    'private'
+  ],
+  [cause]: Error [PostgresError]: insert or update on table "Chat" violates foreign key constraint "Chat_userId_users_id_fk"
+      at ignore-listed frames {
+    severity_local: 'ERROR',
+    severity: 'ERROR',
+    code: '23503',
+    detail: 'Key (userId)=(2f60768a-eea6-4531-b4ed-c5a2c9a6cf77) is not present in table "users".',
+    schema_name: 'public',
+    table_name: 'Chat',
+    constraint_name: 'Chat_userId_users_id_fk',
+    file: 'ri_triggers.c',
+    line: '2599',
+    routine: 'ri_ReportViolation'
+  }
+}
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Database error in saveChat: Error: Failed query: insert into "Chat" ("id", "createdAt", "title", "userId", "visibility") values ($1, $2, $3, $4, $5)
+params: 4826b74e-5bb6-46c5-9c5e-50239bae1e18,2026-04-03T07:14:42.345Z,New chat,2f60768a-eea6-4531-b4ed-c5a2c9a6cf77,private
+    at async saveChat (lib/db/queries.ts:91:12)
+    at async POST (app/(chat)/api/chat/route.ts:113:7)
+  89 | }) {
+  90 |   try {
+> 91 |     return await db.insert(chat).values({
+     |            ^
+  92 |       id,
+  93 |       createdAt: new Date(),
+  94 |       userId, {
+  query: 'insert into "Chat" ("id", "createdAt", "title", "userId", "visibility") values ($1, $2, $3, $4, $5)',
+  params: [
+    '4826b74e-5bb6-46c5-9c5e-50239bae1e18',
+    '2026-04-03T07:14:42.345Z',
+    'New chat',
+    '2f60768a-eea6-4531-b4ed-c5a2c9a6cf77',
+    'private'
+  ],
+  [cause]: Error [PostgresError]: insert or update on table "Chat" violates foreign key constraint "Chat_userId_users_id_fk"
+      at ignore-listed frames {
+    severity_local: 'ERROR',
+    severity: 'ERROR',
+    code: '23503',
+    detail: 'Key (userId)=(2f60768a-eea6-4531-b4ed-c5a2c9a6cf77) is not present in table "users".',
+    schema_name: 'public',
+    table_name: 'Chat',
+    constraint_name: 'Chat_userId_users_id_fk',
+    file: 'ri_triggers.c',
+    line: '2599',
+    routine: 'ri_ReportViolation'
+  }
+}
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Database error in saveChat: Error: Failed query: insert into "Chat" ("id", "createdAt", "title", "userId", "visibility") values ($1, $2, $3, $4, $5)
+params: 48331146-3e66-46d8-ab7b-2e0b6faec360,2026-04-03T07:15:30.737Z,New chat,2f60768a-eea6-4531-b4ed-c5a2c9a6cf77,private
+    at async saveChat (lib/db/queries.ts:91:12)
+    at async POST (app/(chat)/api/chat/route.ts:113:7)
+  89 | }) {
+  90 |   try {
+> 91 |     return await db.insert(chat).values({
+     |            ^
+  92 |       id,
+  93 |       createdAt: new Date(),
+  94 |       userId, {
+  query: 'insert into "Chat" ("id", "createdAt", "title", "userId", "visibility") values ($1, $2, $3, $4, $5)',
+  params: [
+    '48331146-3e66-46d8-ab7b-2e0b6faec360',
+    '2026-04-03T07:15:30.737Z',
+    'New chat',
+    '2f60768a-eea6-4531-b4ed-c5a2c9a6cf77',
+    'private'
+  ],
+  [cause]: Error [PostgresError]: insert or update on table "Chat" violates foreign key constraint "Chat_userId_users_id_fk"
+      at ignore-listed frames {
+    severity_local: 'ERROR',
+    severity: 'ERROR',
+    code: '23503',
+    detail: 'Key (userId)=(2f60768a-eea6-4531-b4ed-c5a2c9a6cf77) is not present in table "users".',
+    schema_name: 'public',
+    table_name: 'Chat',
+    constraint_name: 'Chat_userId_users_id_fk',
+    file: 'ri_triggers.c',
+    line: '2599',
+    routine: 'ri_ReportViolation'
+  }
+}
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 48ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 55ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 57ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 57ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 57ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 58ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 58ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 58ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 58ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 59ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 59ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 613ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 622ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 624ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2... 200 in 2833ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 4198ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 4ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 590ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 591ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 592ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 1418ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2... 200 in 2614ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2880ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 8ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 8ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 712ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 717ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 719ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2... 200 in 3252ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 3142ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 3015ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 421ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 421ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 526ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2914ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2... 200 in 3708ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 3550ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 3ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 2ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 658ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 665ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 683ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2... 200 in 1237ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2841ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2990ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 17ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 21ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 22ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 22ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 22ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 22ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 21ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 21ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 18ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 19ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 19ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 695ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 699ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 702ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2... 200 in 1425ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2928ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2262ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 45ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 44ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 44ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 44ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 44ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 44ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 43ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 43ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 41ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 41ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 42ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 866ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 872ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 879ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 3846ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2334ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+  Reload env: .env
+  Reload env: .env
+  Reload env: .env
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 35ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 24ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 24ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 24ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 23ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 23ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 23ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 23ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 18ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 20ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 20ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 763ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 764ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 764ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 4043ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2160ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 19ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 15ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 15ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 16ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 16ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 16ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 16ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 16ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 15ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 17ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 17ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 607ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 612ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 902ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 3244ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2132ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+Error searching products: Error: 2 UNKNOWN: Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported
+    at Object.execute (lib/ai/tools/check-products.ts:22:14)
+    at executeTool.next (<anonymous>)
+  20 |             .where("category", "==", productName)
+  21 |             .limit(10)
+> 22 |             .get();
+     |              ^
+  23 |           
+  24 |           if (snapshot.empty) {
+  25 |             // Try name prefix {
+  code: 2,
+  details: 'Getting metadata from plugin failed with error: error:1E08010C:DECODER routines::unsupported',
+  metadata: Metadata {
+    internalRepr: Map(0) {},
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 14ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 11ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 11ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 12ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 11ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 11ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 9ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 7ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 7ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 7ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 417ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 419ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 423ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 2845ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 1554ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+○ Compiling /api/files/upload ...
+[Dev Only] Without setting the developmentOptions.bypass value, the bot protection will return HUMAN.
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 51ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 39ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/google/gemini.. 200 in 39ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/deepseek/deep.. 200 in 38ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/codes.. 200 in 38ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/mistral/mistr.. 200 in 38ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 38ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/moonshotai/ki.. 200 in 38ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 36ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/openai/gpt-os.. 200 in 26ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/xai/grok-4.1-.. 200 in 26ms (cache hit)
+ │ GET https://ai-gateway.verce../v1/models/groq/mixtral-.. 404 in 800ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama-3... 404 in 808ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ GET https://ai-gateway.verce../v1/models/groq/llama3-7.. 404 in 814ms (cache skip)
+ │ │ Cache skipped reason: (cache-control: no-cache (hard refresh))
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 4266ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://api.tavily.com/search 200 in 1120ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
+ │ POST https://generativelangua../v1beta/models/gemini-2...?alt=sse 200 in 884ms (cache skip)
+ │ │ Cache skipped reason: (auto no cache)
