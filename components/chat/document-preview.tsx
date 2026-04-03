@@ -53,7 +53,7 @@ export function DocumentPreview({
     result
       ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${result.id}`
       : null,
-    fetcher
+    fetcher,
   );
 
   const previewDocument = useMemo(() => documents?.[0], [documents]);
@@ -162,7 +162,7 @@ const PureHitboxLayer = ({
   hitboxRef: React.RefObject<HTMLDivElement>;
   result?: Partial<DocumentToolOutput>;
   setArtifact: (
-    updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact)
+    updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact),
   ) => void;
 }) => {
   const handleClick = useCallback(
@@ -183,7 +183,7 @@ const PureHitboxLayer = ({
         },
       }));
     },
-    [setArtifact, result]
+    [setArtifact, result],
   );
 
   return (
@@ -259,7 +259,7 @@ const DocumentContent = ({ document }: { document: Document }) => {
     {
       "p-4 sm:px-10 sm:py-10": document.kind === "text",
       "p-0": document.kind === "code",
-    }
+    },
   );
 
   const commonProps = {

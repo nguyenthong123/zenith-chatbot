@@ -13,7 +13,7 @@ import type { UISuggestion } from "./suggestions";
 export const buildDocumentFromContent = (content: string) => {
   const parser = DOMParser.fromSchema(documentSchema);
   const stringFromMarkdown = renderToString(
-    <MessageResponse>{content}</MessageResponse>
+    <MessageResponse>{content}</MessageResponse>,
   );
   const tempContainer = document.createElement("div");
   tempContainer.innerHTML = stringFromMarkdown;
@@ -26,7 +26,7 @@ export const buildContentFromDocument = (document: Node) => {
 
 export const createDecorations = (
   suggestions: UISuggestion[],
-  _view: EditorView
+  _view: EditorView,
 ) => {
   const decorations: Decoration[] = [];
 
@@ -42,8 +42,8 @@ export const createDecorations = (
         {
           suggestionId: suggestion.id,
           type: "highlight",
-        }
-      )
+        },
+      ),
     );
   }
 

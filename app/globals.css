@@ -238,7 +238,7 @@ textarea:focus-visible {
 
 .skeleton {
   * {
-    pointer-events: none !important;
+    pointer-events: none;
   }
 
   *[class^="text-"] {
@@ -385,7 +385,7 @@ textarea:focus-visible {
   @apply bg-transparent! outline-hidden! text-[13px]! leading-[1.6]!;
   font-family:
     "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", ui-monospace,
-    monospace !important;
+    monospace;
 }
 
 .cm-gutters {
@@ -403,7 +403,7 @@ textarea:focus-visible {
 .ͼo.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground,
 .ͼo.cm-selectionBackground,
 .ͼo.cm-content::selection {
-  background: oklch(0.55 0.12 250 / 0.15) !important;
+  background: oklch(0.55 0.12 250 / 0.15);
 }
 
 .dark
@@ -413,7 +413,7 @@ textarea:focus-visible {
   .cm-selectionBackground,
 .dark .ͼo.cm-selectionBackground,
 .dark .ͼo.cm-content::selection {
-  background: oklch(0.55 0.12 250 / 0.2) !important;
+  background: oklch(0.55 0.12 250 / 0.2);
 }
 
 .cm-activeLine {
@@ -425,12 +425,12 @@ textarea:focus-visible {
 }
 
 .cm-activeLineGutter .cm-gutterElement {
-  color: var(--foreground) !important;
+  color: var(--foreground);
   opacity: 0.7;
 }
 
 .cm-gutter.cm-lineNumbers .cm-gutterElement {
-  padding-right: 12px !important;
+  padding-right: 12px;
 }
 
 .cm-foldGutter {
@@ -438,12 +438,12 @@ textarea:focus-visible {
 }
 
 .cm-cursor {
-  border-left-color: oklch(0.55 0.12 250) !important;
-  border-left-width: 2px !important;
+  border-left-color: oklch(0.55 0.12 250);
+  border-left-width: 2px;
 }
 
 .cm-matchingBracket {
-  background: oklch(0.55 0.12 250 / 0.12) !important;
+  background: oklch(0.55 0.12 250 / 0.12);
   outline: 1px solid oklch(0.55 0.12 250 / 0.3);
   border-radius: 2px;
 }

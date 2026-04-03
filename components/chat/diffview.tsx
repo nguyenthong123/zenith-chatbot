@@ -60,10 +60,10 @@ export const DiffView = ({ oldContent, newContent }: DiffEditorProps) => {
       const parser = DOMParser.fromSchema(diffSchema);
 
       const oldHtmlContent = renderToString(
-        <MessageResponse>{oldContent}</MessageResponse>
+        <MessageResponse>{oldContent}</MessageResponse>,
       );
       const newHtmlContent = renderToString(
-        <MessageResponse>{newContent}</MessageResponse>
+        <MessageResponse>{newContent}</MessageResponse>,
       );
 
       const oldContainer = document.createElement("div");
@@ -89,7 +89,7 @@ export const DiffView = ({ oldContent, newContent }: DiffEditorProps) => {
 
       requestAnimationFrame(() => {
         const firstDiff = editorRef.current?.querySelector(
-          "[class*='bg-emerald'], [class*='bg-red']"
+          "[class*='bg-emerald'], [class*='bg-red']",
         );
         if (firstDiff) {
           firstDiff.scrollIntoView({ behavior: "smooth", block: "center" });

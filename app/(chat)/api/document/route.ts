@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   if (!id) {
     return new ChatbotError(
       "bad_request:api",
-      "Parameter id is missing"
+      "Parameter id is missing",
     ).toResponse();
   }
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   if (!id) {
     return new ChatbotError(
       "bad_request:api",
-      "Parameter id is required."
+      "Parameter id is required.",
     ).toResponse();
   }
 
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   } catch {
     return new ChatbotError(
       "bad_request:api",
-      "Invalid request body."
+      "Invalid request body.",
     ).toResponse();
   }
 
@@ -117,14 +117,14 @@ export async function DELETE(request: Request) {
   if (!id) {
     return new ChatbotError(
       "bad_request:api",
-      "Parameter id is required."
+      "Parameter id is required.",
     ).toResponse();
   }
 
   if (!timestamp) {
     return new ChatbotError(
       "bad_request:api",
-      "Parameter timestamp is required."
+      "Parameter timestamp is required.",
     ).toResponse();
   }
 
@@ -147,7 +147,7 @@ export async function DELETE(request: Request) {
   if (Number.isNaN(parsedTimestamp.getTime())) {
     return new ChatbotError(
       "bad_request:api",
-      "Invalid timestamp."
+      "Invalid timestamp.",
     ).toResponse();
   }
 

@@ -97,7 +97,7 @@ export function PureMessageActions({
                 messageId: message.id,
                 type: "up",
               }),
-            }
+            },
           );
 
           toast.promise(upvote, {
@@ -111,7 +111,7 @@ export function PureMessageActions({
                   }
 
                   const votesWithoutCurrent = currentVotes.filter(
-                    (currentVote) => currentVote.messageId !== message.id
+                    (currentVote) => currentVote.messageId !== message.id,
                   );
 
                   return [
@@ -123,7 +123,7 @@ export function PureMessageActions({
                     },
                   ];
                 },
-                { revalidate: false }
+                { revalidate: false },
               );
 
               return "Upvoted Response!";
@@ -150,7 +150,7 @@ export function PureMessageActions({
                 messageId: message.id,
                 type: "down",
               }),
-            }
+            },
           );
 
           toast.promise(downvote, {
@@ -164,7 +164,7 @@ export function PureMessageActions({
                   }
 
                   const votesWithoutCurrent = currentVotes.filter(
-                    (currentVote) => currentVote.messageId !== message.id
+                    (currentVote) => currentVote.messageId !== message.id,
                   );
 
                   return [
@@ -176,7 +176,7 @@ export function PureMessageActions({
                     },
                   ];
                 },
-                { revalidate: false }
+                { revalidate: false },
               );
 
               return "Downvoted Response!";
@@ -203,5 +203,5 @@ export const MessageActions = memo(
     }
 
     return true;
-  }
+  },
 );

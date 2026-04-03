@@ -19,7 +19,7 @@ export function useChatVisibility({
 }) {
   const { mutate, cache } = useSWRConfig();
   const history: ChatHistory = cache.get(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`
+    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`,
   )?.data;
 
   const { data: localVisibility, mutate: setLocalVisibility } = useSWR(
@@ -27,7 +27,7 @@ export function useChatVisibility({
     null,
     {
       fallbackData: initialVisibilityType,
-    }
+    },
   );
 
   const visibilityType = useMemo(() => {

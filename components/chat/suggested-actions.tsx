@@ -46,7 +46,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
               window.history.pushState(
                 {},
                 "",
-                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`,
               );
               sendMessage({
                 role: "user",
@@ -74,5 +74,5 @@ export const SuggestedActions = memo(
     }
 
     return true;
-  }
+  },
 );

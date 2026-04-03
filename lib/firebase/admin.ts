@@ -17,10 +17,6 @@ if (!getApps().length) {
       }),
     });
   } else {
-    // We don't throw here to avoid breaking the local dev if keys are missing
-    console.warn(
-      "Firebase Admin: Missing credentials. Firestore tools will be disabled."
-    );
   }
 }
 

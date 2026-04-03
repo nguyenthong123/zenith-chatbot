@@ -188,7 +188,7 @@ const ReadingLevelSelector = ({
                 {
                   "bg-primary text-primary-foreground": currentLevel !== 2,
                   "bg-background text-foreground": currentLevel === 2,
-                }
+                },
               )}
               drag="y"
               dragConstraints={{ top: -dragConstraints, bottom: 0 }}
@@ -278,7 +278,7 @@ export const Tools = ({
 
 const createFixErrorTool = (
   consoleOutput: string,
-  documentId?: string
+  documentId?: string,
 ): ArtifactToolbarItem => ({
   icon: <WrenchIcon className="size-4" />,
   description: "Fix error",
@@ -363,7 +363,7 @@ const PureToolbar = ({
   }, [status, setIsToolbarVisible]);
 
   const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifactKind
+    (definition) => definition.kind === artifactKind,
   );
 
   if (!artifactDefinition) {

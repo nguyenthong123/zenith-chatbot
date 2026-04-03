@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!chatId) {
     return new ChatbotError(
       "bad_request:api",
-      "Parameter chatId is required."
+      "Parameter chatId is required.",
     ).toResponse();
   }
 
@@ -54,7 +54,7 @@ export async function PATCH(request: Request) {
   } catch {
     return new ChatbotError(
       "bad_request:api",
-      "Parameters chatId, messageId, and type are required."
+      "Parameters chatId, messageId, and type are required.",
     ).toResponse();
   }
 

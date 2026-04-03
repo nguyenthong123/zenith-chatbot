@@ -17,7 +17,7 @@ export default function Page() {
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
     login,
-    { status: "idle" }
+    { status: "idle" },
   );
 
   const { update: updateSession } = useSession();

@@ -19,10 +19,20 @@ import {
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { checkCashBook } from "@/lib/ai/tools/check-cash-book";
+import { checkCustomers } from "@/lib/ai/tools/check-customers";
+import { checkOrders } from "@/lib/ai/tools/check-orders";
+import { checkPayments } from "@/lib/ai/tools/check-payments";
 import { checkPayouts } from "@/lib/ai/tools/check-payouts";
+import { checkProducts } from "@/lib/ai/tools/check-products";
+import { checkSystemConfig } from "@/lib/ai/tools/check-system-config";
+import { checkTrainingLabs } from "@/lib/ai/tools/check-training-labs";
+import { checkUsers } from "@/lib/ai/tools/check-users";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
+import { readPdf } from "@/lib/ai/tools/read-pdf";
+import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { webSearch } from "@/lib/ai/tools/web-search";
@@ -120,13 +130,13 @@ export async function POST(request: Request) {
               ?.filter(
                 (p: Record<string, unknown>) =>
                   p.state === "approval-responded" ||
-                  p.state === "output-denied"
+                  p.state === "output-denied",
               )
               .map((p: Record<string, unknown>) => [
                 String(p.toolCallId ?? ""),
                 p,
-              ]) ?? []
-        )
+              ]) ?? [],
+        ),
       );
       uiMessages = dbMessages.map((msg) => ({
         ...msg,
@@ -198,6 +208,16 @@ export async function POST(request: Request) {
                   "requestSuggestions",
                   "webSearch",
                   "checkPayouts",
+                  "checkUsers",
+                  "checkTrainingLabs",
+                  "checkSystemConfig",
+                  "checkProducts",
+                  "checkCustomers",
+                  "checkOrders",
+                  "checkPayments",
+                  "checkCashBook",
+                  "readUrl",
+                  "readPdf",
                 ],
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
@@ -210,6 +230,8 @@ export async function POST(request: Request) {
           tools: {
             getWeather,
             webSearch,
+            readUrl,
+            readPdf,
             createDocument: createDocument({
               session,
               dataStream,
@@ -227,6 +249,14 @@ export async function POST(request: Request) {
               modelId: chatModel,
             }),
             checkPayouts,
+            checkUsers: checkUsers({ session }),
+            checkTrainingLabs: checkTrainingLabs(),
+            checkSystemConfig: checkSystemConfig(),
+            checkProducts: checkProducts({ session }),
+            checkCustomers: checkCustomers({ session }),
+            checkOrders: checkOrders({ session }),
+            checkPayments: checkPayments({ session }),
+            checkCashBook: checkCashBook({ session }),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
@@ -235,7 +265,7 @@ export async function POST(request: Request) {
         });
 
         dataStream.merge(
-          result.toUIMessageStream({ sendReasoning: isReasoningModel })
+          result.toUIMessageStream({ sendReasoning: isReasoningModel }),
         );
 
         if (titlePromise) {
@@ -286,7 +316,7 @@ export async function POST(request: Request) {
         if (
           error instanceof Error &&
           error.message?.includes(
-            "AI Gateway requires a valid credit card on file to service requests"
+            "AI Gateway requires a valid credit card on file to service requests",
           )
         ) {
           return "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card to add a card and unlock your free credits.";
@@ -308,7 +338,7 @@ export async function POST(request: Request) {
             await createStreamId({ streamId, chatId: id });
             await streamContext.createNewResumableStream(
               streamId,
-              () => sseStream
+              () => sseStream,
             );
           }
         } catch (_) {
@@ -317,7 +347,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const vercelId = request.headers.get("x-vercel-id");
+    const _vercelId = request.headers.get("x-vercel-id");
 
     if (error instanceof ChatbotError) {
       return error.toResponse();
@@ -326,13 +356,11 @@ export async function POST(request: Request) {
     if (
       error instanceof Error &&
       error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
+        "AI Gateway requires a valid credit card on file to service requests",
       )
     ) {
       return new ChatbotError("bad_request:activate_gateway").toResponse();
     }
-
-    console.error("Unhandled error in chat API:", error, { vercelId });
     return new ChatbotError("offline:chat").toResponse();
   }
 }

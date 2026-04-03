@@ -24,7 +24,7 @@ const FileSchema = z.object({
       {
         message:
           "File type not supported. Please upload an image, PDF, or text file.",
-      }
+      },
     ),
 });
 
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   } catch (_error) {
     return NextResponse.json(
       { error: "Failed to process request" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -46,7 +46,7 @@ function Toast(props: ToastProps) {
       <div
         className={cn(
           "flex toast-mobile:w-fit w-full flex-row gap-3 rounded-lg bg-card border border-border/50 shadow-[var(--shadow-float)] p-3",
-          multiLine ? "items-start" : "items-center"
+          multiLine ? "items-start" : "items-center",
         )}
         data-testid="toast"
         key={id}
@@ -54,7 +54,7 @@ function Toast(props: ToastProps) {
         <div
           className={cn(
             "data-[type=error]:text-red-600 data-[type=success]:text-green-600",
-            { "pt-1": multiLine }
+            { "pt-1": multiLine },
           )}
           data-type={type}
         >

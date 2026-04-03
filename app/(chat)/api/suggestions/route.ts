@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   if (!documentId) {
     return new ChatbotError(
       "bad_request:api",
-      "Parameter documentId is required."
+      "Parameter documentId is required.",
     ).toResponse();
   }
 

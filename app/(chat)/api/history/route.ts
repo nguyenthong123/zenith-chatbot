@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
   const limit = Math.min(
     Math.max(Number.parseInt(searchParams.get("limit") || "10", 10), 1),
-    50
+    50,
   );
   const startingAfter = searchParams.get("starting_after");
   const endingBefore = searchParams.get("ending_before");
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   if (startingAfter && endingBefore) {
     return new ChatbotError(
       "bad_request:api",
-      "Only one of starting_after or ending_before can be provided."
+      "Only one of starting_after or ending_before can be provided.",
     ).toResponse();
   }
 

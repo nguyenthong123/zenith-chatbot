@@ -60,7 +60,6 @@ export const checkPayouts = tool({
         count: results.length,
       };
     } catch (error) {
-      console.error("Firestore Query Error:", error);
       return {
         error: "Failed to query payout data from Firestore.",
         message: error instanceof Error ? error.message : String(error),

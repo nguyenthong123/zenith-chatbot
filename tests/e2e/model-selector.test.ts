@@ -75,7 +75,7 @@ test.describe("Model Selector", () => {
     await expect(page.getByPlaceholder("Search models...")).not.toBeVisible();
 
     await expect(
-      page.locator("button").filter({ hasText: "Mistral Small" }).first()
+      page.locator("button").filter({ hasText: "Mistral Small" }).first(),
     ).toBeVisible();
   });
 });

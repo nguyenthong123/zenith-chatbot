@@ -127,7 +127,7 @@ export async function getCapabilities(): Promise<
       try {
         const res = await fetch(
           `https://ai-gateway.vercel.sh/v1/models/${model.id}/endpoints`,
-          { next: { revalidate: 86_400 } }
+          { next: { revalidate: 86_400 } },
         );
         if (!res.ok) {
           return [model.id, { tools: false, vision: false, reasoning: false }];
@@ -138,11 +138,11 @@ export async function getCapabilities(): Promise<
         const params = new Set(
           endpoints.flatMap(
             (e: { supported_parameters?: string[] }) =>
-              e.supported_parameters ?? []
-          )
+              e.supported_parameters ?? [],
+          ),
         );
         const architectureInputModalities = new Set(
-          json.data?.architecture?.input_modalities ?? []
+          json.data?.architecture?.input_modalities ?? [],
         );
 
         // Force vision and tools for Gemini, DeepSeek, and Groq models if not detected
@@ -165,7 +165,7 @@ export async function getCapabilities(): Promise<
         }
         return [model.id, { tools: false, vision: false, reasoning: false }];
       }
-    })
+    }),
   );
 
   return Object.fromEntries(results);
@@ -228,5 +228,5 @@ export const modelsByProvider = chatModels.reduce(
     acc[model.provider].push(model);
     return acc;
   },
-  {} as Record<string, ChatModel[]>
+  {} as Record<string, ChatModel[]>,
 );

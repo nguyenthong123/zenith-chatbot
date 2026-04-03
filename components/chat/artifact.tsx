@@ -97,7 +97,7 @@ function PureArtifact({
     artifact.documentId !== "init" && artifact.status !== "streaming"
       ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`
       : null,
-    fetcher
+    fetcher,
   );
 
   const [mode, setMode] = useState<"edit" | "diff">("edit");
@@ -182,7 +182,7 @@ function PureArtifact({
                 kind: artifact.kind,
                 isManualEdit: true,
               }),
-            }
+            },
           );
 
           setIsContentDirty(false);
@@ -190,13 +190,13 @@ function PureArtifact({
           return currentDocuments.map((doc, i) =>
             i === currentDocuments.length - 1
               ? { ...doc, content: updatedContent }
-              : doc
+              : doc,
           );
         },
-        { revalidate: false }
+        { revalidate: false },
       );
     },
-    [artifact, mutate]
+    [artifact, mutate],
   );
 
   const latestContentRef = useRef<string>("");
@@ -221,7 +221,7 @@ function PureArtifact({
         handleContentChange(updatedContent);
       }
     },
-    [handleContentChange]
+    [handleContentChange],
   );
 
   function getDocumentContentById(index: number) {
@@ -268,7 +268,7 @@ function PureArtifact({
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
   const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifact.kind
+    (definition) => definition.kind === artifact.kind,
   );
 
   if (!artifactDefinition) {
@@ -301,7 +301,7 @@ function PureArtifact({
     metadata?.outputs
       ?.filter((o: { status: string }) => o.status === "failed")
       .flatMap((o: { contents: { type: string; value: string }[] }) =>
-        o.contents.filter((c) => c.type === "text").map((c) => c.value)
+        o.contents.filter((c) => c.type === "text").map((c) => c.value),
       )
       .join("\n") || undefined;
 

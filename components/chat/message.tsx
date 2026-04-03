@@ -45,7 +45,7 @@ const PurePreviewMessage = ({
   onEdit?: (message: ChatMessage) => void;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
-    (part) => part.type === "file"
+    (part) => part.type === "file",
   );
 
   useDataStream();
@@ -59,7 +59,7 @@ const PurePreviewMessage = ({
       (part.type === "reasoning" &&
         "text" in part &&
         part.text?.trim().length > 0) ||
-      part.type.startsWith("tool-")
+      part.type.startsWith("tool-"),
   );
   const isThinking = isAssistant && isLoading && !hasAnyContent;
 
@@ -92,7 +92,7 @@ const PurePreviewMessage = ({
       }
       return acc;
     },
-    { text: "", isStreaming: false, rendered: false }
+    { text: "", isStreaming: false, rendered: false },
   ) ?? { text: "", isStreaming: false, rendered: false };
 
   const parts = message.parts?.map((part, index) => {
@@ -333,14 +333,14 @@ const PurePreviewMessage = ({
     <div
       className={cn(
         "group/message w-full",
-        !isAssistant && "animate-[fade-up_0.25s_cubic-bezier(0.22,1,0.36,1)]"
+        !isAssistant && "animate-[fade-up_0.25s_cubic-bezier(0.22,1,0.36,1)]",
       )}
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
       <div
         className={cn(
-          isUser ? "flex flex-col items-end gap-2" : "flex items-start gap-3"
+          isUser ? "flex flex-col items-end gap-2" : "flex items-start gap-3",
         )}
       >
         {isAssistant && (

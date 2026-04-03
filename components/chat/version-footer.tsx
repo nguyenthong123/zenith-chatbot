@@ -72,7 +72,7 @@ export const VersionFooter = ({
         <button
           className={cn(
             "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            mode === "diff" && "bg-muted text-foreground"
+            mode === "diff" && "bg-muted text-foreground",
           )}
           onClick={() => setMode(mode === "diff" ? "edit" : "diff")}
           title="Show changes"
@@ -95,11 +95,11 @@ export const VersionFooter = ({
                 await fetch(
                   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
                     documents,
-                    currentVersionIndex
+                    currentVersionIndex,
                   )}`,
                   {
                     method: "DELETE",
-                  }
+                  },
                 ),
                 {
                   optimisticData: documents
@@ -110,14 +110,14 @@ export const VersionFooter = ({
                             new Date(
                               getDocumentTimestampByIndex(
                                 documents,
-                                currentVersionIndex
-                              )
-                            )
-                          )
+                                currentVersionIndex,
+                              ),
+                            ),
+                          ),
                         ),
                       ]
                     : [],
-                }
+                },
               );
             } finally {
               setIsMutating(false);

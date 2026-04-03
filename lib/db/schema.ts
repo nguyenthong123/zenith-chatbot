@@ -1,4 +1,3 @@
-import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
@@ -11,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const user = pgTable("User", {
+export const user = pgTable("users", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   email: varchar("email", { length: 64 }).notNull(),
   password: varchar("password", { length: 64 }),
@@ -23,13 +22,13 @@ export const user = pgTable("User", {
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
-export type User = InferSelectModel<typeof user>;
+export type User = typeof user.$inferSelect;
 
 export const chat = pgTable("Chat", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   createdAt: timestamp("createdAt").notNull(),
   title: text("title").notNull(),
-  userId: uuid("userId")
+  userId: text("userId")
     .notNull()
     .references(() => user.id),
   visibility: varchar("visibility", { enum: ["public", "private"] })
@@ -37,7 +36,7 @@ export const chat = pgTable("Chat", {
     .default("private"),
 });
 
-export type Chat = InferSelectModel<typeof chat>;
+export type Chat = typeof chat.$inferSelect;
 
 export const message = pgTable("Message_v2", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -50,7 +49,7 @@ export const message = pgTable("Message_v2", {
   createdAt: timestamp("createdAt").notNull(),
 });
 
-export type DBMessage = InferSelectModel<typeof message>;
+export type DBMessage = typeof message.$inferSelect;
 
 export const vote = pgTable(
   "Vote_v2",
@@ -65,10 +64,10 @@ export const vote = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-  })
+  }),
 );
 
-export type Vote = InferSelectModel<typeof vote>;
+export type Vote = typeof vote.$inferSelect;
 
 export const document = pgTable(
   "Document",
@@ -80,16 +79,16 @@ export const document = pgTable(
     kind: varchar("text", { enum: ["text", "code", "image", "sheet"] })
       .notNull()
       .default("text"),
-    userId: uuid("userId")
+    userId: text("userId")
       .notNull()
       .references(() => user.id),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.id, table.createdAt] }),
-  })
+  }),
 );
 
-export type Document = InferSelectModel<typeof document>;
+export type Document = typeof document.$inferSelect;
 
 export const suggestion = pgTable(
   "Suggestion",
@@ -101,7 +100,7 @@ export const suggestion = pgTable(
     suggestedText: text("suggestedText").notNull(),
     description: text("description"),
     isResolved: boolean("isResolved").notNull().default(false),
-    userId: uuid("userId")
+    userId: text("userId")
       .notNull()
       .references(() => user.id),
     createdAt: timestamp("createdAt").notNull(),
@@ -112,10 +111,10 @@ export const suggestion = pgTable(
       columns: [table.documentId, table.documentCreatedAt],
       foreignColumns: [document.id, document.createdAt],
     }),
-  })
+  }),
 );
 
-export type Suggestion = InferSelectModel<typeof suggestion>;
+export type Suggestion = typeof suggestion.$inferSelect;
 
 export const stream = pgTable(
   "Stream",
@@ -130,7 +129,28 @@ export const stream = pgTable(
       columns: [table.chatId],
       foreignColumns: [chat.id],
     }),
-  })
+  }),
 );
 
-export type Stream = InferSelectModel<typeof stream>;
+export type Stream = typeof stream.$inferSelect;
+
+export const userMemory = pgTable("user_memories", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type UserMemory = typeof userMemory.$inferSelect;
+
+export const knowledgeBase = pgTable("knowledge_base", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  content: text("content").notNull(),
+  metadata: json("metadata"),
+  userId: text("userId").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type KnowledgeBase = typeof knowledgeBase.$inferSelect;
