@@ -8,11 +8,11 @@ config({
 });
 
 const runMigrate = async () => {
-  if (!process.env.POSTGRES_URL) {
+  if (!process.env.DATABASE_URL) {
     process.exit(0);
   }
 
-  const connection = postgres(process.env.POSTGRES_URL, { max: 1 });
+  const connection = postgres(process.env.DATABASE_URL, { max: 1 });
   const db = drizzle(connection);
 
   const _start = Date.now();
