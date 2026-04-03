@@ -1,6 +1,9 @@
+import "@/lib/polyfills";
 import { tool } from "ai";
-import { PDFParse } from "pdf-parse";
 import { z } from "zod";
+
+// Import pdf-parse using require to ensure polyfills are set up first
+const { PDFParse } = require("pdf-parse");
 
 export const readPdf = tool({
   description:

@@ -1,3 +1,4 @@
+import "@/lib/polyfills";
 import { geolocation } from "@vercel/functions";
 import {
   convertToModelMessages,
