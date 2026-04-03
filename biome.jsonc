@@ -55,5 +55,10 @@
         "useTopLevelRegex": "off"
       }
     }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }
