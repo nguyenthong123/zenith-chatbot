@@ -1,6 +1,6 @@
 import { tool } from "ai";
-// @ts-ignore
-import pdf from "pdf-parse";
+// @ts-expect-error
+import { PDFParse } from "pdf-parse";
 import { z } from "zod";
 
 export const readPdf = tool({
@@ -20,14 +20,19 @@ export const readPdf = tool({
       }
 
       const buffer = Buffer.from(await response.arrayBuffer());
-      const data = await pdf(buffer);
+      const parser = new PDFParse({ data: buffer });
+
+      const [textResult, infoResult] = await Promise.all([
+        parser.getText(),
+        parser.getInfo(),
+      ]);
 
       return {
         url,
-        text: data.text.slice(0, 20000), // Limit text size for model context
-        info: data.info,
-        numpages: data.numpages,
-        isTruncated: data.text.length > 20000,
+        text: textResult.text.slice(0, 20000), // Limit text size for model context
+        info: infoResult,
+        numpages: textResult.pages.length,
+        isTruncated: textResult.text.length > 20000,
       };
     } catch (error) {
       return {

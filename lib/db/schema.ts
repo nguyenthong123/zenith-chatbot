@@ -28,7 +28,7 @@ export const chat = pgTable("Chat", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   createdAt: timestamp("createdAt").notNull(),
   title: text("title").notNull(),
-  userId: text("userId")
+  userId: uuid("userId")
     .notNull()
     .references(() => user.id),
   visibility: varchar("visibility", { enum: ["public", "private"] })
@@ -79,7 +79,7 @@ export const document = pgTable(
     kind: varchar("text", { enum: ["text", "code", "image", "sheet"] })
       .notNull()
       .default("text"),
-    userId: text("userId")
+    userId: uuid("userId")
       .notNull()
       .references(() => user.id),
   },
@@ -100,7 +100,7 @@ export const suggestion = pgTable(
     suggestedText: text("suggestedText").notNull(),
     description: text("description"),
     isResolved: boolean("isResolved").notNull().default(false),
-    userId: text("userId")
+    userId: uuid("userId")
       .notNull()
       .references(() => user.id),
     createdAt: timestamp("createdAt").notNull(),
@@ -136,7 +136,7 @@ export type Stream = typeof stream.$inferSelect;
 
 export const userMemory = pgTable("user_memories", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  userId: text("userId")
+  userId: uuid("userId")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
@@ -149,7 +149,7 @@ export const knowledgeBase = pgTable("knowledge_base", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   content: text("content").notNull(),
   metadata: json("metadata"),
-  userId: text("userId").references(() => user.id, { onDelete: "set null" }),
+  userId: uuid("userId").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
 });
 
