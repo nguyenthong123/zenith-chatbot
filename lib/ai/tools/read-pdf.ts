@@ -1,5 +1,4 @@
 import { tool } from "ai";
-// @ts-expect-error
 import { PDFParse } from "pdf-parse";
 import { z } from "zod";
 
