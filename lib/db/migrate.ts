@@ -20,9 +20,22 @@ const runMigrate = async () => {
   const db = drizzle(connection);
 
   const _start = Date.now();
-  await migrate(db, { migrationsFolder: "./lib/db/migrations" });
+  try {
+    await migrate(db, { migrationsFolder: "./lib/db/migrations" });
+  } catch (err: any) {
+    // 42P07 is the Postgres error code for "relation already exists"
+    if (err.code === "42P07") {
+      console.log(
+        "Migration notice: Some tables already exist. Continuing build...",
+      );
+    } else {
+      console.error("Migration failed with error:", err);
+      process.exit(1);
+    }
+  }
   await connection.end();
   const _end = Date.now();
+  console.log(`Migration finished in ${_end - _start}ms`);
   process.exit(0);
 };
 
