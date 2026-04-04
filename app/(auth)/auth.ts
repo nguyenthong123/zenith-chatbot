@@ -86,7 +86,7 @@ export const {
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
-        token.role = (user as any).role as string;
+        token.role = (user.role ?? "user") as string;
       }
 
       return token;
