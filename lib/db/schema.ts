@@ -1,26 +1,42 @@
 import {
+  bigint,
   boolean,
+  doublePrecision,
   foreignKey,
+  integer,
   json,
+  numeric,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const user = pgTable("users", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 64 }).notNull(),
-  password: varchar("password", { length: 64 }),
-  name: text("name"),
-  emailVerified: boolean("emailVerified").notNull().default(false),
-  image: text("image"),
-  isAnonymous: boolean("isAnonymous").notNull().default(false),
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-});
+export const user = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    email: varchar("email", { length: 64 }).notNull(),
+    password: varchar("password", { length: 64 }),
+    name: text("name"),
+    displayName: text("displayName"),
+    photoUrl: text("photoUrl"),
+    role: varchar("role", { length: 50 }).notNull().default("user"),
+    emailVerified: boolean("emailVerified").notNull().default(false),
+    image: text("image"),
+    isAnonymous: boolean("isAnonymous").notNull().default(false),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    firestoreId: varchar("firestoreId", { length: 255 }),
+  },
+  (table) => ({
+    emailIndex: uniqueIndex("email_idx").on(table.email),
+    firestoreIdIndex: uniqueIndex("firestore_id_idx").on(table.firestoreId),
+  }),
+);
 
 export type User = typeof user.$inferSelect;
 
@@ -154,3 +170,151 @@ export const knowledgeBase = pgTable("knowledge_base", {
 });
 
 export type KnowledgeBase = typeof knowledgeBase.$inferSelect;
+
+export const product = pgTable("products", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: text("name").notNull(),
+  sku: varchar("sku", { length: 255 }),
+  category: text("category"),
+  priceBuy: bigint("priceBuy", { mode: "number" }),
+  priceSell: bigint("priceSell", { mode: "number" }),
+  stock: numeric("stock").default("0"),
+  unit: varchar("unit", { length: 100 }),
+  specification: text("specification"),
+  packaging: text("packaging"),
+  density: text("density"),
+  status: varchar("status", { length: 50 }),
+  note: text("note"),
+  expiryDate: text("expiryDate"), // Keeping as text to match Firestore string date
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type Product = typeof product.$inferSelect;
+
+export const priceList = pgTable("price_lists", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  title: text("title").notNull(),
+  headers: json("headers"),
+  items: json("items"),
+  ownerId: text("ownerId"),
+  updatedBy: text("updatedBy"),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type PriceList = typeof priceList.$inferSelect;
+
+export const systemConfig = pgTable("system_config", {
+  id: text("id").primaryKey().notNull(), // 'payment'
+  accountName: text("accountName"),
+  accountNumber: text("accountNumber"),
+  bankId: text("bankId"),
+  subscriptionLimit: timestamp("subscriptionLimit"), // for "nap tien" app usage
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  updatedBy: text("updatedBy"),
+});
+
+export type SystemConfig = typeof systemConfig.$inferSelect;
+
+export const customer = pgTable(
+  "customers",
+  {
+    id: text("id").primaryKey().notNull(), // Firestore ID
+    name: text("name"),
+    businessName: text("businessName"),
+    phone: varchar("phone", { length: 50 }),
+    address: text("address"),
+    type: varchar("type", { length: 100 }),
+    status: varchar("status", { length: 50 }),
+    lat: doublePrecision("lat"),
+    lng: doublePrecision("lng"),
+    ownerId: uuid("ownerId").references(() => user.id),
+    ownerEmail: text("ownerEmail"),
+    createdByEmail: text("createdByEmail"),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    ownerIdx: uniqueIndex("customer_owner_idx").on(table.ownerId, table.id),
+    nameIdx: uniqueIndex("customer_name_idx").on(table.name),
+  }),
+);
+
+export type Customer = typeof customer.$inferSelect;
+
+export const order = pgTable(
+  "orders",
+  {
+    id: text("id").primaryKey().notNull(), // Firestore ID
+    orderId: varchar("orderId", { length: 100 }),
+    customerId: text("customerId").references(() => customer.id, {
+      onDelete: "set null",
+    }),
+    customerName: text("customerName"),
+    totalAmount: bigint("totalAmount", { mode: "number" }),
+    status: varchar("status", { length: 50 }),
+    date: timestamp("date"), // Changed from varchar to timestamp
+    items: json("items"),
+    ownerId: uuid("ownerId").references(() => user.id),
+    createdByEmail: text("createdByEmail"),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    dateIdx: uniqueIndex("order_date_idx").on(table.date),
+    ownerIdx: uniqueIndex("order_owner_idx").on(table.ownerId),
+  }),
+);
+
+export type Order = typeof order.$inferSelect;
+
+export const cashBook = pgTable(
+  "cash_book",
+  {
+    id: text("id").primaryKey().notNull(), // Firestore ID
+    amount: bigint("amount", { mode: "number" }),
+    type: varchar("type", { length: 50 }), // 'thu' or 'chi'
+    category: text("category"),
+    date: timestamp("date"), // Changed from varchar to timestamp
+    bankName: text("bankName"),
+    note: text("note"),
+    interestRate: numeric("interestRate"),
+    loanTerm: text("loanTerm"),
+    ownerId: uuid("ownerId").references(() => user.id),
+    createdByEmail: text("createdByEmail"),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    dateIdx: uniqueIndex("cash_date_idx").on(table.date),
+    ownerIdx: uniqueIndex("cash_owner_idx").on(table.ownerId),
+  }),
+);
+
+export type CashBook = typeof cashBook.$inferSelect;
+
+export const payment = pgTable(
+  "payments",
+  {
+    id: text("id").primaryKey().notNull(), // Firestore ID
+    amount: bigint("amount", { mode: "number" }),
+    customerId: text("customerId").references(() => customer.id, {
+      onDelete: "set null",
+    }),
+    customerName: text("customerName"),
+    date: timestamp("date"), // Changed from varchar to timestamp
+    paymentMethod: varchar("paymentMethod", { length: 100 }),
+    proofImage: text("proofImage"),
+    note: text("note"),
+    ownerId: uuid("ownerId").references(() => user.id),
+    createdByEmail: text("createdByEmail"),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    dateIdx: uniqueIndex("payment_date_idx").on(table.date),
+    ownerIdx: uniqueIndex("payment_owner_idx").on(table.ownerId),
+  }),
+);
+
+export type Payment = typeof payment.$inferSelect;

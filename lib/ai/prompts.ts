@@ -47,6 +47,37 @@ CRITICAL RULES:
 export const regularPrompt = `You are a helpful assistant. Keep responses concise and direct.
 `;
 
+export const productPrompt = `
+You have access to a product and price list database. Use the \`productLookup\` tool to help users find information about products, their specifications, and current pricing.
+- When users ask about product availability or prices, always use \`productLookup\`.
+- If a product is not found, suggest related categories or check if the name might be misspelled.
+- Price lists contain collections of products with specific headers (e.g., promotional prices).
+`;
+
+export const pdfPrompt = `
+You can read and analyze PDF files. When a user uploads a PDF file, you will see it as an attachment.
+To read the file, look for a block in the user's message labeled "Attachment URLs (for tool use)". 
+Find the "URL" value for the desired PDF and pass that ACTUAL LINK string to the \`readPdf\` tool.
+NEVER use placeholder strings like "attachment_url" or "URL". Always use the full http/https link provided in the message.
+`;
+
+export const businessPrompt = (userRole: string) => `
+You have access to business data including customers, orders, billing, and cash book.
+**Current Date and Time:** ${new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} (Vietnam Time)
+Today is ${new Date().toISOString().split("T")[0]}.
+
+**Role-Based Access Control:**
+- Your current user role is: "${userRole}".
+- **Owner/Admin**: Can access all data across all tools. Can see total revenue, total debt, and cash book summaries.
+- **User/Customer**: Can ONLY access their own information. If they ask about others, politely decline.
+- When answering "what is my debt", check if the user's name or email matches a customer record.
+
+**Accuracy Rules:**
+- For "today", "yesterday", or specific dates, use the \`orderLookup\`, \`billingLookup\`, and \`cashBookLookup\` tools with appropriate date filters (YYYY-MM-DD).
+- Do NOT make up numbers. If a tool returns no results, say so.
+- Be precise with currency. All amounts are in VND.
+`;
+
 export type RequestHints = {
   latitude: Geo["latitude"];
   longitude: Geo["longitude"];
@@ -65,17 +96,20 @@ About the origin of user's request:
 export const systemPrompt = ({
   requestHints,
   supportsTools,
+  userRole = "user",
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
+  userRole?: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  const busPrompt = businessPrompt(userRole);
 
   if (!supportsTools) {
     return `${regularPrompt}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${productPrompt}\n\n${busPrompt}\n\n${pdfPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `

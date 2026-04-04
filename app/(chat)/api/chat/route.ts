@@ -20,12 +20,18 @@ import {
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { billingLookup } from "@/lib/ai/tools/billing-lookup";
+import { cashBookLookup } from "@/lib/ai/tools/cash-book-lookup";
 import { createDocument } from "@/lib/ai/tools/create-document";
+import { customerLookup } from "@/lib/ai/tools/customer-lookup";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
+import { orderLookup } from "@/lib/ai/tools/order-lookup";
+import { productLookup } from "@/lib/ai/tools/product-lookup";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { webSearch } from "@/lib/ai/tools/web-search";
 import { isProductionEnvironment } from "@/lib/constants";
@@ -61,18 +67,19 @@ function getStreamContext() {
 export { getStreamContext };
 
 export async function POST(request: Request) {
-  let requestBody: PostRequestBody;
-
   try {
-    const json = await request.json();
-    requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
-    return new ChatbotError("bad_request:api").toResponse();
-  }
+    const body = await request.json();
 
-  try {
+    let parsedBody: PostRequestBody;
+    try {
+      parsedBody = postRequestBodySchema.parse(body);
+    } catch (error) {
+      console.error("Zod Validation Error:", error);
+      return new ChatbotError("bad_request:api").toResponse();
+    }
+
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+      parsedBody;
 
     const [, session] = await Promise.all([
       checkBotId().catch(() => null),
@@ -158,6 +165,37 @@ export async function POST(request: Request) {
       ];
     }
 
+    // Inject attachment URLs into the last message to ensure LLM can see them
+    const lastMessage = uiMessages[uiMessages.length - 1];
+    if (
+      lastMessage &&
+      lastMessage.role === "user" &&
+      lastMessage.attachments &&
+      lastMessage.attachments.length > 0
+    ) {
+      const pdfAttachments = lastMessage.attachments.filter(
+        (a) =>
+          a.contentType?.includes("pdf") ||
+          a.name?.toLowerCase().endsWith(".pdf"),
+      );
+
+      if (pdfAttachments.length > 0) {
+        const attachmentText = pdfAttachments
+          .map((a) => `[PDF Attachment: ${a.name}, URL: ${a.url}]`)
+          .join("\n");
+
+        lastMessage.parts = lastMessage.parts.map((part) => {
+          if (part.type === "text") {
+            return {
+              ...part,
+              text: `${part.text}\n\nAttachment URLs (for tool use):\n${attachmentText}`,
+            };
+          }
+          return part;
+        });
+      }
+    }
+
     const { longitude, latitude, city, country } = geolocation(request);
 
     const requestHints: RequestHints = {
@@ -175,7 +213,7 @@ export async function POST(request: Request) {
             id: message.id,
             role: "user",
             parts: message.parts,
-            attachments: [],
+            attachments: message.attachments ?? [],
             createdAt: new Date(),
           },
         ],
@@ -195,7 +233,11 @@ export async function POST(request: Request) {
       execute: async ({ writer: dataStream }) => {
         const result = streamText({
           model: getLanguageModel(chatModel),
-          system: systemPrompt({ requestHints, supportsTools }),
+          system: systemPrompt({
+            requestHints,
+            supportsTools,
+            userRole: session?.user?.role,
+          }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
           experimental_activeTools:
@@ -210,6 +252,12 @@ export async function POST(request: Request) {
                   "webSearch",
                   "readUrl",
                   "readPdf",
+                  "productLookup",
+                  "customerLookup",
+                  "orderLookup",
+                  "billingLookup",
+                  "cashBookLookup",
+                  "syncFirestoreToSupabase",
                 ],
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
@@ -240,6 +288,12 @@ export async function POST(request: Request) {
               dataStream,
               modelId: chatModel,
             }),
+            productLookup,
+            customerLookup,
+            orderLookup,
+            billingLookup,
+            cashBookLookup,
+            syncFirestoreToSupabase,
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
@@ -289,7 +343,7 @@ export async function POST(request: Request) {
               role: currentMessage.role,
               parts: currentMessage.parts,
               createdAt: new Date(),
-              attachments: [],
+              attachments: currentMessage.attachments ?? [],
               chatId: id,
             })),
           });

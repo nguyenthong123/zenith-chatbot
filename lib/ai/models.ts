@@ -129,8 +129,21 @@ export async function getCapabilities(): Promise<
           `https://ai-gateway.vercel.sh/v1/models/${model.id}/endpoints`,
           { next: { revalidate: 86_400 } },
         );
+
+        // Force vision and tools for Gemini, DeepSeek, and Groq models
+        const isGemini = model.id.includes("gemini");
+        const isDeepSeek = model.id.includes("deepseek");
+        const isGroq = model.id.includes("groq");
+
         if (!res.ok) {
-          return [model.id, { tools: false, vision: false, reasoning: false }];
+          return [
+            model.id,
+            {
+              tools: isGemini || isDeepSeek || isGroq,
+              vision: isGemini,
+              reasoning: false,
+            },
+          ];
         }
 
         const json = await res.json();
@@ -145,11 +158,6 @@ export async function getCapabilities(): Promise<
           json.data?.architecture?.input_modalities ?? [],
         );
 
-        // Force vision and tools for Gemini, DeepSeek, and Groq models if not detected
-        const isGemini = model.id.includes("gemini");
-        const isDeepSeek = model.id.includes("deepseek");
-        const isGroq = model.id.includes("groq");
-
         return [
           model.id,
           {
@@ -160,10 +168,18 @@ export async function getCapabilities(): Promise<
         ];
       } catch {
         // Fallback for Gemini models even on error
-        if (model.id.includes("gemini")) {
-          return [model.id, { tools: true, vision: true, reasoning: false }];
-        }
-        return [model.id, { tools: false, vision: false, reasoning: false }];
+        const isGemini = model.id.includes("gemini");
+        const isDeepSeek = model.id.includes("deepseek");
+        const isGroq = model.id.includes("groq");
+
+        return [
+          model.id,
+          {
+            tools: isGemini || isDeepSeek || isGroq,
+            vision: isGemini,
+            reasoning: false,
+          },
+        ];
       }
     }),
   );
