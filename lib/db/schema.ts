@@ -20,8 +20,8 @@ export const user = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().notNull().defaultRandom(),
-    email: varchar("email", { length: 64 }).notNull(),
-    password: varchar("password", { length: 64 }),
+    email: varchar("email", { length: 255 }).notNull(),
+    password: varchar("password", { length: 255 }),
     name: text("name"),
     displayName: text("displayName"),
     photoUrl: text("photoUrl"),
