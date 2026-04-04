@@ -16,16 +16,39 @@ import {
 
 // Initialize Firebase Admin (Singleton-ish)
 if (!admin.apps.length) {
-  const serviceAccountPath = path.join(
-    process.cwd(),
-    "config/service-account.json",
-  );
-  const serviceAccount = JSON.parse(
-    fs.readFileSync(serviceAccountPath, "utf8"),
-  );
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  let serviceAccount: any;
+  const envServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  if (envServiceAccount) {
+    try {
+      serviceAccount = JSON.parse(envServiceAccount);
+    } catch (err) {
+      console.error(
+        "Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable:",
+        err,
+      );
+    }
+  }
+
+  if (!serviceAccount) {
+    const serviceAccountPath = path.join(
+      process.cwd(),
+      "config/service-account.json",
+    );
+    if (fs.existsSync(serviceAccountPath)) {
+      serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+    }
+  }
+
+  if (serviceAccount) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } else {
+    console.error(
+      "Firebase Service Account not found. Please set FIREBASE_SERVICE_ACCOUNT env var or add config/service-account.json",
+    );
+  }
 }
 
 const firestore = admin.firestore();
