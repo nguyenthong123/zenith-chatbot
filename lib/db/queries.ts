@@ -712,10 +712,11 @@ export async function searchKnowledgeBase(query?: string) {
     if (!query) {
       return await db.select().from(knowledgeBase).limit(10);
     }
+    const escapedQuery = query.replace(/[\\%_]/g, "\\$&");
     return await db
       .select()
       .from(knowledgeBase)
-      .where(ilike(knowledgeBase.content, `%${query}%`))
+      .where(ilike(knowledgeBase.content, `%${escapedQuery}%`))
       .limit(10);
   } catch (_error) {
     return [];
