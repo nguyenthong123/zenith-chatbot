@@ -61,16 +61,26 @@ Find the "URL" value for the desired PDF and pass that ACTUAL LINK string to the
 NEVER use placeholder strings like "attachment_url" or "URL". Always use the full http/https link provided in the message.
 `;
 
-export const businessPrompt = (userRole: string) => `
+export const businessPrompt = (
+  userRole: string,
+  userName?: string | null,
+  userEmail?: string | null,
+) => `
 You have access to business data including customers, orders, billing, and cash book.
 **Current Date and Time:** ${new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} (Vietnam Time)
 Today is ${new Date().toISOString().split("T")[0]}.
 
-**Role-Based Access Control:**
-- Your current user role is: "${userRole}".
+**User Identity:**
+- Your current user ID: "${userName || "Unknown"}" (DisplayName).
+- Your current user Email: "${userEmail || "Unknown"}".
+- Your current user role: "${userRole}".
+
+**Role-Based Access Control & Identity Rules:**
 - **Owner/Admin**: Can access all data across all tools. Can see total revenue, total debt, and cash book summaries.
-- **User/Customer**: Can ONLY access their own information. If they ask about others, politely decline.
-- When answering "what is my debt", check if the user's name or email matches a customer record.
+- **User/Customer**: Can ONLY access their own information. 
+- **Personal Data Query**: If the user asks for "my" data (e.g., "đơn hàng của tôi", "công nợ của tôi", "tổng đơn hàng của tôi"), use the provided Identity (name: ${userName || "Unknown"}, email: ${userEmail || "Unknown"}) to search automatically via tools. Use "orderLookup", "customerLookup", or "billingLookup" with these identifiers. 
+- Do NOT ask "What is your name?" if the name is already provided in the context above.
+- If the user asks about others, politely decline unless you are an Admin.
 
 **Accuracy Rules:**
 - For "today", "yesterday", or specific dates, use the \`orderLookup\`, \`billingLookup\`, and \`cashBookLookup\` tools with appropriate date filters (YYYY-MM-DD).
@@ -97,13 +107,17 @@ export const systemPrompt = ({
   requestHints,
   supportsTools,
   userRole = "user",
+  userName = "Unknown",
+  userEmail = "Unknown",
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
   userRole?: string;
+  userName?: string | null;
+  userEmail?: string | null;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
-  const busPrompt = businessPrompt(userRole);
+  const busPrompt = businessPrompt(userRole, userName, userEmail);
 
   if (!supportsTools) {
     return `${regularPrompt}\n\n${requestPrompt}`;

@@ -54,6 +54,30 @@ export async function getUserById(id: string): Promise<User[]> {
   }
 }
 
+export async function getUserByEmail(email: string): Promise<User[]> {
+  try {
+    return await db.select().from(user).where(eq(user.email, email));
+  } catch (_error) {
+    return [];
+  }
+}
+
+export async function getUserByZaloId(zaloId: string): Promise<User[]> {
+  try {
+    return await db.select().from(user).where(eq(user.zaloId, zaloId));
+  } catch (_error) {
+    return [];
+  }
+}
+
+export async function updateUserZaloId(userId: string, zaloId: string) {
+  try {
+    return await db.update(user).set({ zaloId }).where(eq(user.id, userId));
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to update zaloId");
+  }
+}
+
 export async function createUser(email: string, password: string) {
   const hashedPassword = generateHashedPassword(password);
 

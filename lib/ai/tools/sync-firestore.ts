@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import * as admin from "firebase-admin";
 import * as fs from "fs";
 import * as path from "path";
@@ -10,7 +10,9 @@ import {
   customer as customerTable,
   order as orderTable,
   payment as paymentTable,
+  priceList as priceListTable,
   product as productTable,
+  systemConfig as systemConfigTable,
   user as userTable,
 } from "@/lib/db/schema";
 
@@ -65,9 +67,14 @@ function toTimestamp(val: unknown): Date | null {
   return new Date();
 }
 
+function toDateString(val: unknown): string | null {
+  const d = toTimestamp(val);
+  return d ? d.toISOString().split("T")[0] : null;
+}
+
 export const syncFirestoreToSupabase = tool({
   description:
-    "Sync all data from Firestore to the optimized Supabase database. This includes customers, orders, payments, products and cash book entries. Use this when the user asks to 'migrate' or 'sync' data.",
+    "Sync all data from Firestore to the optimized Supabase database. This includes customers, orders, payments, products, cash book entries and system configurations. Use this when the user asks to 'migrate' or 'sync' data.",
   inputSchema: z.object({
     collections: z
       .array(z.string())
@@ -83,13 +90,14 @@ export const syncFirestoreToSupabase = tool({
         "users",
         "customers",
         "products",
+        "price_lists",
         "orders",
         "payments",
         "cash_book",
+        "system_config",
       ];
 
       // 1. Get User Mapping (Firestore ID -> Supabase UUID)
-      // We need this for the ownerId foreign key
       const userMappings = new Map<string, string>();
       const existingUsers = await db.select().from(userTable);
       existingUsers.forEach((u) => {
@@ -103,7 +111,7 @@ export const syncFirestoreToSupabase = tool({
       };
 
       for (const col of targetCollections) {
-        console.log(`[Migration] Syncing collection: ${col}...`);
+        console.log(`[Migration Tool] Syncing collection: ${col}...`);
         const snapshot = await firestore.collection(col).get();
         const docs = snapshot.docs;
         let count = 0;
@@ -114,13 +122,18 @@ export const syncFirestoreToSupabase = tool({
 
           try {
             if (col === "users") {
+              const email =
+                data.email ||
+                (data.isAnonymous ? null : `guest-${id}@example.com`) ||
+                `user-${id}@example.com`;
               const record = {
-                email: data.email || "",
+                email: email,
                 name: data.displayName || data.name || "",
                 displayName: data.displayName || "",
                 photoUrl: data.photoURL || "",
                 role: data.role || "user",
                 firestoreId: id,
+                zaloId: data.zaloId ? String(data.zaloId) : null,
                 createdAt: toTimestamp(data.createdAt) || new Date(),
                 updatedAt: toTimestamp(data.updatedAt) || new Date(),
               };
@@ -147,7 +160,10 @@ export const syncFirestoreToSupabase = tool({
                 lng: data.lng || null,
                 ownerId: getOwnerUuid(data.ownerId),
                 ownerEmail: data.ownerEmail,
+                createdBy: data.createdBy,
                 createdByEmail: data.createdByEmail,
+                updatedBy: data.updatedBy,
+                updatedByEmail: data.updatedByEmail,
                 createdAt: toTimestamp(data.createdAt) || new Date(),
                 updatedAt: toTimestamp(data.updatedAt) || new Date(),
               };
@@ -161,33 +177,68 @@ export const syncFirestoreToSupabase = tool({
                 name: data.name,
                 sku: data.sku,
                 category: data.category,
-                priceBuy: Number(data.priceBuy) || 0,
-                priceSell: Number(data.priceSell) || 0,
+                priceBuy: Math.floor(Number(data.priceBuy || 0)),
+                priceSell: Math.floor(Number(data.priceSell || 0)),
                 stock: String(data.stock || "0"),
                 unit: data.unit,
                 specification: data.specification,
+                packaging: data.packaging,
+                density: data.density,
+                expiryDate: data.expiryDate ? String(data.expiryDate) : null,
                 status: data.status,
+                note: data.note,
+                metadata: data.metadata || null,
+                ownerId: getOwnerUuid(data.ownerId),
+                ownerEmail: data.ownerEmail,
+                createdBy: data.createdBy,
+                createdByEmail: data.createdByEmail,
+                updatedBy: data.updatedBy,
+                updatedByEmail: data.updatedByEmail,
                 createdAt: toTimestamp(data.createdAt) || new Date(),
                 updatedAt: toTimestamp(data.updatedAt) || new Date(),
               };
-              // Note: products uses UUID id, but for migration from Firestore we keep the ID as is if it's a UUID
-              // If not, we might need to handle differently. For now assuming Firestore ID mapping works or we use onConflict
               await db.insert(productTable).values(record).onConflictDoUpdate({
                 target: productTable.id,
                 set: record,
               });
+            } else if (col === "price_lists") {
+              const record = {
+                id: id,
+                title: data.title,
+                headers: data.headers || [],
+                items: data.items || [],
+                ownerId: getOwnerUuid(data.ownerId),
+                ownerEmail: data.ownerEmail,
+                createdBy: data.createdBy,
+                createdByEmail: data.createdByEmail,
+                updatedBy: data.updatedBy,
+                updatedByEmail: data.updatedByEmail,
+                createdAt: toTimestamp(data.createdAt) || new Date(),
+                updatedAt: toTimestamp(data.updatedAt) || new Date(),
+              };
+              await db
+                .insert(priceListTable)
+                .values(record)
+                .onConflictDoUpdate({
+                  target: priceListTable.id,
+                  set: record,
+                });
             } else if (col === "orders") {
               const record = {
                 id: id,
                 orderId: data.orderId,
                 customerId: data.customerId,
                 customerName: data.customerName,
-                totalAmount: Number(data.totalAmount) || 0,
+                totalAmount: Math.floor(Number(data.totalAmount || 0)),
                 status: data.status,
-                date: toTimestamp(data.date),
+                date: toDateString(data.date),
                 items: data.items || [],
                 ownerId: getOwnerUuid(data.ownerId),
+                ownerEmail: data.ownerEmail,
+                createdBy: data.createdBy,
                 createdByEmail: data.createdByEmail,
+                updatedBy: data.updatedBy,
+                updatedByEmail: data.updatedByEmail,
                 createdAt: toTimestamp(data.createdAt) || new Date(),
                 updatedAt: toTimestamp(data.updatedAt) || new Date(),
               };
@@ -198,15 +249,19 @@ export const syncFirestoreToSupabase = tool({
             } else if (col === "payments") {
               const record = {
                 id: id,
-                amount: Number(data.amount) || 0,
+                amount: Math.floor(Number(data.amount || 0)),
                 customerId: data.customerId,
                 customerName: data.customerName,
-                date: toTimestamp(data.date),
+                date: toDateString(data.date),
                 paymentMethod: data.paymentMethod,
                 proofImage: data.proofImage,
                 note: data.note,
                 ownerId: getOwnerUuid(data.ownerId),
+                ownerEmail: data.ownerEmail,
+                createdBy: data.createdBy,
                 createdByEmail: data.createdByEmail,
+                updatedBy: data.updatedBy,
+                updatedByEmail: data.updatedByEmail,
                 createdAt: toTimestamp(data.createdAt) || new Date(),
               };
               await db.insert(paymentTable).values(record).onConflictDoUpdate({
@@ -216,26 +271,52 @@ export const syncFirestoreToSupabase = tool({
             } else if (col === "cash_book") {
               const record = {
                 id: id,
-                amount: Number(data.amount) || 0,
+                amount: Math.floor(Number(data.amount || 0)),
                 type: data.type,
                 category: data.category,
-                date: toTimestamp(data.date),
+                date: toDateString(data.date),
                 bankName: data.bankName,
                 note: data.note,
                 interestRate: String(data.interestRate || "0"),
                 loanTerm: data.loanTerm,
                 ownerId: getOwnerUuid(data.ownerId),
+                ownerEmail: data.ownerEmail,
+                createdBy: data.createdBy,
                 createdByEmail: data.createdByEmail,
+                updatedBy: data.updatedBy,
+                updatedByEmail: data.updatedByEmail,
                 createdAt: toTimestamp(data.createdAt) || new Date(),
               };
               await db.insert(cashBookTable).values(record).onConflictDoUpdate({
                 target: cashBookTable.id,
                 set: record,
               });
+            } else if (col === "system_config") {
+              const record = {
+                id: id,
+                accountName: data.accountName,
+                accountNumber: data.accountNumber,
+                bankId: data.bankId,
+                subscriptionLimit: data.subscriptionLimit
+                  ? new Date(data.subscriptionLimit)
+                  : null,
+                updatedBy: data.updatedBy,
+                updatedAt: toTimestamp(data.updatedAt) || new Date(),
+              };
+              await db
+                .insert(systemConfigTable)
+                .values(record)
+                .onConflictDoUpdate({
+                  target: systemConfigTable.id,
+                  set: record,
+                });
             }
             count++;
           } catch (err) {
-            // Error handling for individual records
+            console.error(
+              `[Migration Tool] Failed to sync record ${id} in ${col}:`,
+              err,
+            );
           }
         }
         results[col] = count;
@@ -244,7 +325,8 @@ export const syncFirestoreToSupabase = tool({
       return {
         success: true,
         summary: results,
-        message: "Synchronized Firestore data to Supabase successfully.",
+        message:
+          "Synchronized Firestore data to Supabase successfully with full metadata.",
       };
     } catch (error) {
       return {

@@ -20,14 +20,14 @@ import {
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
-import { billingLookup } from "@/lib/ai/tools/billing-lookup";
-import { cashBookLookup } from "@/lib/ai/tools/cash-book-lookup";
+import { getBillingLookup } from "@/lib/ai/tools/billing-lookup";
+import { getCashBookLookup } from "@/lib/ai/tools/cash-book-lookup";
 import { createDocument } from "@/lib/ai/tools/create-document";
-import { customerLookup } from "@/lib/ai/tools/customer-lookup";
+import { getCustomerLookup } from "@/lib/ai/tools/customer-lookup";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
-import { orderLookup } from "@/lib/ai/tools/order-lookup";
-import { productLookup } from "@/lib/ai/tools/product-lookup";
+import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
+import { getProductLookup } from "@/lib/ai/tools/product-lookup";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -237,6 +237,8 @@ export async function POST(request: Request) {
             requestHints,
             supportsTools,
             userRole: session?.user?.role,
+            userName: session?.user?.name,
+            userEmail: session?.user?.email,
           }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
@@ -288,11 +290,26 @@ export async function POST(request: Request) {
               dataStream,
               modelId: chatModel,
             }),
-            productLookup,
-            customerLookup,
-            orderLookup,
-            billingLookup,
-            cashBookLookup,
+            productLookup: getProductLookup(
+              session.user.id,
+              session.user.role || "user",
+            ),
+            customerLookup: getCustomerLookup(
+              session.user.id,
+              session.user.role || "user",
+            ),
+            orderLookup: getOrderLookup(
+              session.user.id,
+              session.user.role || "user",
+            ),
+            billingLookup: getBillingLookup(
+              session.user.id,
+              session.user.role || "user",
+            ),
+            cashBookLookup: getCashBookLookup(
+              session.user.id,
+              session.user.role || "user",
+            ),
             syncFirestoreToSupabase,
           },
           experimental_telemetry: {

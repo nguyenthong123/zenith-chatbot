@@ -3,6 +3,7 @@ import {
   boolean,
   doublePrecision,
   foreignKey,
+  index,
   integer,
   json,
   numeric,
@@ -31,14 +32,26 @@ export const user = pgTable(
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
     firestoreId: varchar("firestoreId", { length: 255 }),
+    zaloId: varchar("zaloId", { length: 255 }),
   },
   (table) => ({
     emailIndex: uniqueIndex("email_idx").on(table.email),
     firestoreIdIndex: uniqueIndex("firestore_id_idx").on(table.firestoreId),
+    zaloIdIndex: uniqueIndex("zalo_id_idx").on(table.zaloId),
   }),
 );
 
 export type User = typeof user.$inferSelect;
+
+export const guestUser = pgTable("guest_users", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  email: varchar("email", { length: 255 }),
+  name: text("name"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  firestoreId: varchar("firestoreId", { length: 255 }),
+});
+
+export type GuestUser = typeof guestUser.$inferSelect;
 
 export const chat = pgTable("Chat", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -172,7 +185,7 @@ export const knowledgeBase = pgTable("knowledge_base", {
 export type KnowledgeBase = typeof knowledgeBase.$inferSelect;
 
 export const product = pgTable("products", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  id: text("id").primaryKey().notNull(),
   name: text("name").notNull(),
   sku: varchar("sku", { length: 255 }),
   category: text("category"),
@@ -185,8 +198,14 @@ export const product = pgTable("products", {
   density: text("density"),
   status: varchar("status", { length: 50 }),
   note: text("note"),
-  expiryDate: text("expiryDate"), // Keeping as text to match Firestore string date
+  expiryDate: text("expiryDate"),
   metadata: json("metadata"),
+  ownerId: uuid("ownerId").references(() => user.id),
+  ownerEmail: text("ownerEmail"),
+  createdBy: text("createdBy"),
+  createdByEmail: text("createdByEmail"),
+  updatedBy: text("updatedBy"),
+  updatedByEmail: text("updatedByEmail"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
@@ -194,12 +213,16 @@ export const product = pgTable("products", {
 export type Product = typeof product.$inferSelect;
 
 export const priceList = pgTable("price_lists", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  id: text("id").primaryKey().notNull(),
   title: text("title").notNull(),
   headers: json("headers"),
   items: json("items"),
-  ownerId: text("ownerId"),
+  ownerId: uuid("ownerId").references(() => user.id),
+  ownerEmail: text("ownerEmail"),
+  createdBy: text("createdBy"),
+  createdByEmail: text("createdByEmail"),
   updatedBy: text("updatedBy"),
+  updatedByEmail: text("updatedByEmail"),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
 });
@@ -207,11 +230,11 @@ export const priceList = pgTable("price_lists", {
 export type PriceList = typeof priceList.$inferSelect;
 
 export const systemConfig = pgTable("system_config", {
-  id: text("id").primaryKey().notNull(), // 'payment'
+  id: text("id").primaryKey().notNull(),
   accountName: text("accountName"),
   accountNumber: text("accountNumber"),
   bankId: text("bankId"),
-  subscriptionLimit: timestamp("subscriptionLimit"), // for "nap tien" app usage
+  subscriptionLimit: timestamp("subscriptionLimit"),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   updatedBy: text("updatedBy"),
 });
@@ -221,7 +244,7 @@ export type SystemConfig = typeof systemConfig.$inferSelect;
 export const customer = pgTable(
   "customers",
   {
-    id: text("id").primaryKey().notNull(), // Firestore ID
+    id: text("id").primaryKey().notNull(),
     name: text("name"),
     businessName: text("businessName"),
     phone: varchar("phone", { length: 50 }),
@@ -232,13 +255,16 @@ export const customer = pgTable(
     lng: doublePrecision("lng"),
     ownerId: uuid("ownerId").references(() => user.id),
     ownerEmail: text("ownerEmail"),
+    createdBy: text("createdBy"),
     createdByEmail: text("createdByEmail"),
+    updatedBy: text("updatedBy"),
+    updatedByEmail: text("updatedByEmail"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (table) => ({
     ownerIdx: uniqueIndex("customer_owner_idx").on(table.ownerId, table.id),
-    nameIdx: uniqueIndex("customer_name_idx").on(table.name),
+    nameIdx: index("customer_name_idx").on(table.name),
   }),
 );
 
@@ -247,24 +273,26 @@ export type Customer = typeof customer.$inferSelect;
 export const order = pgTable(
   "orders",
   {
-    id: text("id").primaryKey().notNull(), // Firestore ID
+    id: text("id").primaryKey().notNull(),
     orderId: varchar("orderId", { length: 100 }),
-    customerId: text("customerId").references(() => customer.id, {
-      onDelete: "set null",
-    }),
+    customerId: text("customerId"),
     customerName: text("customerName"),
     totalAmount: bigint("totalAmount", { mode: "number" }),
     status: varchar("status", { length: 50 }),
-    date: timestamp("date"), // Changed from varchar to timestamp
+    date: varchar("date", { length: 255 }),
     items: json("items"),
     ownerId: uuid("ownerId").references(() => user.id),
+    ownerEmail: text("ownerEmail"),
+    createdBy: text("createdBy"),
     createdByEmail: text("createdByEmail"),
+    updatedBy: text("updatedBy"),
+    updatedByEmail: text("updatedByEmail"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (table) => ({
-    dateIdx: uniqueIndex("order_date_idx").on(table.date),
-    ownerIdx: uniqueIndex("order_owner_idx").on(table.ownerId),
+    dateIdx: index("order_date_idx").on(table.date),
+    ownerIdx: index("order_owner_idx").on(table.ownerId),
   }),
 );
 
@@ -273,22 +301,26 @@ export type Order = typeof order.$inferSelect;
 export const cashBook = pgTable(
   "cash_book",
   {
-    id: text("id").primaryKey().notNull(), // Firestore ID
+    id: text("id").primaryKey().notNull(),
     amount: bigint("amount", { mode: "number" }),
-    type: varchar("type", { length: 50 }), // 'thu' or 'chi'
+    type: varchar("type", { length: 50 }),
     category: text("category"),
-    date: timestamp("date"), // Changed from varchar to timestamp
+    date: varchar("date", { length: 255 }),
     bankName: text("bankName"),
     note: text("note"),
     interestRate: numeric("interestRate"),
     loanTerm: text("loanTerm"),
     ownerId: uuid("ownerId").references(() => user.id),
+    ownerEmail: text("ownerEmail"),
+    createdBy: text("createdBy"),
     createdByEmail: text("createdByEmail"),
+    updatedBy: text("updatedBy"),
+    updatedByEmail: text("updatedByEmail"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (table) => ({
-    dateIdx: uniqueIndex("cash_date_idx").on(table.date),
-    ownerIdx: uniqueIndex("cash_owner_idx").on(table.ownerId),
+    dateIdx: index("cash_date_idx").on(table.date),
+    ownerIdx: index("cash_owner_idx").on(table.ownerId),
   }),
 );
 
@@ -297,23 +329,25 @@ export type CashBook = typeof cashBook.$inferSelect;
 export const payment = pgTable(
   "payments",
   {
-    id: text("id").primaryKey().notNull(), // Firestore ID
+    id: text("id").primaryKey().notNull(),
     amount: bigint("amount", { mode: "number" }),
-    customerId: text("customerId").references(() => customer.id, {
-      onDelete: "set null",
-    }),
+    customerId: text("customerId"),
     customerName: text("customerName"),
-    date: timestamp("date"), // Changed from varchar to timestamp
+    date: varchar("date", { length: 255 }),
     paymentMethod: varchar("paymentMethod", { length: 100 }),
     proofImage: text("proofImage"),
     note: text("note"),
     ownerId: uuid("ownerId").references(() => user.id),
+    ownerEmail: text("ownerEmail"),
+    createdBy: text("createdBy"),
     createdByEmail: text("createdByEmail"),
+    updatedBy: text("updatedBy"),
+    updatedByEmail: text("updatedByEmail"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (table) => ({
-    dateIdx: uniqueIndex("payment_date_idx").on(table.date),
-    ownerIdx: uniqueIndex("payment_owner_idx").on(table.ownerId),
+    dateIdx: index("payment_date_idx").on(table.date),
+    ownerIdx: index("payment_owner_idx").on(table.ownerId),
   }),
 );
 

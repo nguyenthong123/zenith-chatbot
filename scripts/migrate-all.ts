@@ -6,6 +6,7 @@ import postgres from "postgres";
 import {
   cashBook as cashBookTable,
   customer as customerTable,
+  guestUser as guestUserTable,
   order as orderTable,
   payment as paymentTable,
   product as productTable,
@@ -28,6 +29,13 @@ if (!admin.apps.length) {
 }
 
 const firestore = admin.firestore();
+const userMap = new Map<string, string>(); // firestoreId -> supabaseId (uuid)
+
+function isGuest(email?: string): boolean {
+  if (!email) return true;
+  const e = email.toLowerCase();
+  return e.startsWith("guest-") || e.endsWith("@example.com");
+}
 
 async function migrateCollection(
   collectionName: string,
@@ -47,10 +55,17 @@ async function migrateCollection(
 
     try {
       if (records.length > 0) {
-        await db.insert(table).values(records).onConflictDoUpdate({
-          target: table.id,
-          set: records[0], // Generic update for simplicity in script, though mapping would be better
-        });
+        await db
+          .insert(table)
+          .values(records)
+          .onConflictDoUpdate({
+            target: table.id || table.email || table.firestoreId,
+            set: Object.keys(records[0]).reduce((acc: any, key) => {
+              // Proper identifier quoting for PG
+              acc[key] = sql.raw(`excluded."${key}"`);
+              return acc;
+            }, {}),
+          });
       }
     } catch (err) {
       console.error(`Error migrating chunk of ${collectionName}:`, err);
@@ -66,43 +81,140 @@ function toTimestamp(val: any) {
 }
 
 async function startMigration() {
-  // 1. Users
-  await migrateCollection(
-    "users",
-    (id, data) => ({
-      email: data.email || "",
+  // 1. All Users (Admins + Customers as Users)
+  console.log("Migrating all users...");
+  const userSnapshot = await firestore.collection("users").get();
+  const customerSnapshot = await firestore.collection("customers").get();
+
+  const allUsersMap = new Map<string, any>();
+  const guests: any[] = [];
+
+  // From users collection
+  for (const doc of userSnapshot.docs) {
+    const data = doc.data();
+    const id = doc.id;
+    let email = data.email || data.ownerEmail || data.createdByEmail || "";
+
+    if (!email) {
+      email = `no-email-${id}@dunvex.com`;
+    }
+
+    const record = {
+      email,
       name: data.displayName || data.name || "",
       displayName: data.displayName || "",
       photoUrl: data.photoURL || "",
-      role: data.role || "user",
+      role: data.role || "admin",
       firestoreId: id,
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
-    }),
-    userTable,
-  );
+    };
+
+    allUsersMap.set(email, record);
+    // Also map guest-like users to allUsersMap instead of a separate table if possible
+  }
+
+  // From customers collection (sync roles)
+  for (const doc of customerSnapshot.docs) {
+    const data = doc.data();
+    const email = data.email || data.ownerEmail || data.createdByEmail || "";
+    if (email) {
+      if (!allUsersMap.has(email)) {
+        allUsersMap.set(email, {
+          email,
+          name: data.name || "",
+          displayName: data.name || "",
+          role: "user",
+          firestoreId: doc.id,
+          createdAt: toTimestamp(data.createdAt),
+          updatedAt: toTimestamp(data.updatedAt),
+        });
+      }
+    }
+  }
+
+  const userRecords = Array.from(allUsersMap.values());
+  if (userRecords.length > 0) {
+    console.log(`Syncing ${userRecords.length} users to users table...`);
+    for (let i = 0; i < userRecords.length; i += 100) {
+      const chunk = userRecords.slice(i, i + 100);
+      const inserted = await db
+        .insert(userTable)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: userTable.email,
+          set: {
+            name: sql`excluded.name`,
+            displayName: sql`excluded."displayName"`,
+            role: sql`excluded.role`,
+            firestoreId: sql`excluded."firestoreId"`,
+            updatedAt: sql`excluded."updatedAt"`,
+          },
+        })
+        .returning({ id: userTable.id, firestoreId: userTable.firestoreId });
+
+      for (const row of inserted) {
+        if (row.firestoreId) userMap.set(row.firestoreId, row.id);
+      }
+    }
+  }
+
+  if (guests.length > 0) {
+    console.log(`Inserting ${guests.length} guests into guest_users...`);
+    await db
+      .insert(guestUserTable)
+      .values(guests.map((g) => ({ ...g, id: undefined })))
+      .onConflictDoNothing();
+  }
 
   // 2. Customers
-  await migrateCollection(
-    "customers",
-    (id, data) => ({
-      id: id,
-      name: data.name,
-      businessName: data.businessName,
-      phone: data.phone,
-      address: data.address,
-      type: data.type,
-      status: data.status,
+  console.log("Migrating customers collection...");
+  const realCustomers: any[] = [];
+
+  for (const doc of customerSnapshot.docs) {
+    const data = doc.data();
+
+    realCustomers.push({
+      id: doc.id,
+      name: data.name || "",
+      businessName: data.businessName || "",
+      phone: data.phone || "",
+      address: data.address || "",
+      type: data.type || "",
+      status: data.status || "",
       lat: data.lat || null,
       lng: data.lng || null,
-      ownerId: data.ownerId,
-      ownerEmail: data.ownerEmail,
-      createdByEmail: data.createdByEmail,
+      ownerId: userMap.get(data.ownerId), // Map to UUID
+      ownerEmail: data.ownerEmail || "",
+      createdByEmail: data.createdByEmail || "",
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
-    }),
-    customerTable,
-  );
+    });
+  }
+
+  if (realCustomers.length > 0) {
+    console.log(
+      `Syncing ${realCustomers.length} customers to customers table...`,
+    );
+    for (let i = 0; i < realCustomers.length; i += 100) {
+      const chunk = realCustomers.slice(i, i + 100);
+      await db
+        .insert(customerTable)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: customerTable.id,
+          set: {
+            name: sql`excluded.name`,
+            businessName: sql`excluded."businessName"`,
+            phone: sql`excluded.phone`,
+            address: sql`excluded.address`,
+            status: sql`excluded.status`,
+            ownerId: sql`excluded."ownerId"`,
+            updatedAt: sql`excluded."updatedAt"`,
+          },
+        });
+    }
+  }
 
   // 3. Products (Re-migration with upsert)
   await migrateCollection(
@@ -119,7 +231,7 @@ async function startMigration() {
       imageUrl: data.imageUrl,
       status: data.status,
       specification: data.specification,
-      ownerId: data.ownerId,
+      ownerId: userMap.get(data.ownerId),
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
     }),
@@ -138,7 +250,7 @@ async function startMigration() {
       status: data.status,
       date: data.date,
       items: data.items || [],
-      ownerId: data.ownerId,
+      ownerId: userMap.get(data.ownerId),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
@@ -159,7 +271,7 @@ async function startMigration() {
       note: data.note,
       interestRate: String(data.interestRate || "0"),
       loanTerm: data.loanTerm,
-      ownerId: data.ownerId,
+      ownerId: userMap.get(data.ownerId),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
     }),
@@ -178,7 +290,7 @@ async function startMigration() {
       paymentMethod: data.paymentMethod,
       proofImage: data.proofImage,
       note: data.note,
-      ownerId: data.ownerId,
+      ownerId: userMap.get(data.ownerId),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
     }),
