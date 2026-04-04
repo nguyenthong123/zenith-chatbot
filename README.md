@@ -1,71 +1,71 @@
-<a href="https://chatbot.ai-sdk.dev/demo">
-  <img alt="Chatbot" src="app/(chat)/opengraph-image.png">
-  <h1 align="center">Chatbot</h1>
+<a href="https://zenith-chatbot.vercel.app">
+  <img alt="Zenith Chatbot" src="app/(chat)/opengraph-image.png">
+  <h1 align="center">Zenith Chatbot</h1>
 </a>
 
 <p align="center">
-    Chatbot (formerly AI Chatbot) is a free, open-source template built with Next.js and the AI SDK that helps you quickly build powerful chatbot applications.
+  Zenith Chatbot is an open-source AI chat application built with <strong>Next.js App Router</strong> and the <strong>Vercel AI SDK</strong>.
+  It supports multiple frontier models via Vercel AI Gateway and features ultra-fast inference through <strong>Groq</strong> and web search via <strong>Tavily</strong>.
 </p>
 
 <p align="center">
-  <a href="https://chatbot.ai-sdk.dev/docs"><strong>Read Docs</strong></a> ·
+  <a href="https://zenith-chatbot.vercel.app"><strong>Live Demo</strong></a> ·
   <a href="#features"><strong>Features</strong></a> ·
-  <a href="#model-providers"><strong>Model Providers</strong></a> ·
-  <a href="#deploy-your-own"><strong>Deploy Your Own</strong></a> ·
-  <a href="#running-locally"><strong>Running locally</strong></a>
+  <a href="#environment-variables"><strong>Environment Variables</strong></a> ·
+  <a href="#running-locally"><strong>Running Locally</strong></a>
 </p>
 <br/>
 
 ## Features
 
-- [Next.js](https://nextjs.org) App Router
-  - Advanced routing for seamless navigation and performance
-  - React Server Components (RSCs) and Server Actions for server-side rendering and increased performance
-- [AI SDK](https://ai-sdk.dev/docs/introduction)
-  - Unified API for generating text, structured objects, and tool calls with LLMs
-  - Hooks for building dynamic chat and generative user interfaces
-  - Supports OpenAI, Anthropic, Google, xAI, and other model providers via AI Gateway
-- [shadcn/ui](https://ui.shadcn.com)
-  - Styling with [Tailwind CSS](https://tailwindcss.com)
-  - Component primitives from [Radix UI](https://radix-ui.com) for accessibility and flexibility
-- Data Persistence
-  - [Neon Serverless Postgres](https://vercel.com/marketplace/neon) for saving chat history and user data
-  - [Vercel Blob](https://vercel.com/storage/blob) for efficient file storage
-- [Auth.js](https://authjs.dev)
-  - Simple and secure authentication
+- **[Next.js](https://nextjs.org) App Router** — Advanced routing, React Server Components, and Server Actions for high performance
+- **[AI SDK](https://ai-sdk.dev/docs/introduction)** — Unified API for text generation, structured outputs, and tool calls across multiple LLM providers
+- **Multi-model support via [Vercel AI Gateway](https://vercel.com/docs/ai-gateway)** — Google Gemini, Groq (Llama 3), DeepSeek, Mistral, Moonshot, OpenAI, and xAI
+- **Ultra-fast inference with [Groq](https://groq.com)** — Llama 3.3 70B and Mixtral 8x7B served at blazing speed
+- **Web search with [Tavily](https://tavily.com)** — Real-time search results integrated into chat responses
+- **[shadcn/ui](https://ui.shadcn.com)** — Accessible component primitives styled with [Tailwind CSS](https://tailwindcss.com)
+- **Data persistence** — [Neon Serverless Postgres](https://vercel.com/marketplace/neon) for chat history and [Vercel Blob](https://vercel.com/storage/blob) for file storage
+- **Authentication** — Secure session management with [Auth.js](https://authjs.dev)
 
-## Model Providers
+## Environment Variables
 
-This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. Models are configured in `lib/ai/models.ts` with per-model provider routing. Included models: Mistral, Moonshot, DeepSeek, OpenAI, and xAI.
+Copy `.env.example` to `.env.local` and fill in the required values:
 
-### AI Gateway Authentication
+```bash
+cp .env.example .env.local
+```
 
-**For Vercel deployments**: Authentication is handled automatically via OIDC tokens.
+| Variable | Required | Description |
+|---|---|---|
+| `AUTH_SECRET` | ✅ Yes | Random secret for Auth.js — generate with `openssl rand -base64 32` |
+| `AI_GATEWAY_API_KEY` | ✅ Yes (non-Vercel) | Vercel AI Gateway API key; automatically handled on Vercel via OIDC |
+| `POSTGRES_URL` / `DATABASE_URL` | ✅ Yes | Postgres connection string (e.g. Neon) |
+| `BLOB_READ_WRITE_TOKEN` | ✅ Yes | Vercel Blob token for file uploads |
+| `REDIS_URL` | Optional | Redis connection string for rate limiting / caching |
 
-**For non-Vercel deployments**: You need to provide an AI Gateway API key by setting the `AI_GATEWAY_API_KEY` environment variable in your `.env.local` file.
+> **Note:** Never commit your `.env.local` file — it is already in `.gitignore`.
 
-With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to direct LLM providers like [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://ai-sdk.dev/providers/ai-sdk-providers) with just a few lines of code.
+## Running Locally
 
-## Deploy Your Own
-
-You can deploy your own version of Chatbot to Vercel with one click:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/templates/next.js/chatbot)
-
-## Running locally
-
-You will need to use the environment variables [defined in `.env.example`](.env.example) to run Chatbot. It's recommended you use [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables) for this, but a `.env` file is all that is necessary.
-
-> Note: You should not commit your `.env` file or it will expose secrets that will allow others to control access to your various AI and authentication provider accounts.
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. Link local instance with Vercel and GitHub accounts (creates `.vercel` directory): `vercel link`
-3. Download your environment variables: `vercel env pull`
+1. Install dependencies:
 
 ```bash
 pnpm install
-pnpm db:migrate # Setup database or apply latest database changes
+```
+
+2. Set up your environment variables (see [Environment Variables](#environment-variables) above).
+
+3. Run the database migration:
+
+```bash
+pnpm db:migrate
+```
+
+4. Start the development server:
+
+```bash
 pnpm dev
 ```
 
-Your app template should now be running on [localhost:3000](http://localhost:3000).
+Your app is now running at [http://localhost:3000](http://localhost:3000).
+
