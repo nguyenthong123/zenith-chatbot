@@ -8,11 +8,15 @@ config({
 });
 
 const runMigrate = async () => {
-  if (!process.env.DATABASE_URL) {
+  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!dbUrl) {
+    console.log(
+      "No connection string found (DATABASE_URL or POSTGRES_URL). Skipping migration.",
+    );
     process.exit(0);
   }
 
-  const connection = postgres(process.env.DATABASE_URL, { max: 1 });
+  const connection = postgres(dbUrl, { max: 1 });
   const db = drizzle(connection);
 
   const _start = Date.now();
