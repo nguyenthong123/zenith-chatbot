@@ -1,5 +1,6 @@
 "use server";
 
+import { AuthError } from "next-auth";
 import { z } from "zod";
 
 import { createUser, getUser } from "@/lib/db/queries";
@@ -50,7 +51,12 @@ export const login = async (
       return { status: "invalid_data" };
     }
 
-    return { status: "failed" };
+    if (error instanceof AuthError) {
+      return { status: "failed" };
+    }
+
+    // Re-throw redirect errors and other non-handled errors
+    throw error;
   }
 };
 
@@ -155,10 +161,17 @@ export const register = async (
       return { status: "invalid_data" };
     }
 
-    console.error(
-      "[register] Unexpected error during registration:",
-      error instanceof Error ? error.message : "Unknown error",
-    );
-    return { status: "failed" };
+    if (error instanceof AuthError) {
+      console.error(
+        "[register] Auth error during registration:",
+        error.type,
+        error.message,
+      );
+      return { status: "failed" };
+    }
+
+    // Re-throw redirect errors and other non-handled errors
+    // NextAuth v5 signIn() may throw NEXT_REDIRECT on success
+    throw error;
   }
 };
