@@ -118,9 +118,7 @@ export const register = async (
     // supabaseData.user will exist with a valid id — treat as success and proceed
     if (supabaseData?.user) {
       console.log(
-        "[register] Supabase Auth signUp succeeded for:",
-        validatedData.email,
-        "| user id:",
+        "[register] Supabase Auth signUp succeeded | user id:",
         supabaseData.user.id,
       );
     }
@@ -131,20 +129,14 @@ export const register = async (
       const [existingUser] = await getUser(validatedData.email);
       if (!existingUser) {
         await createUser(validatedData.email, validatedData.password);
-        console.log(
-          "[register] Local DB user created for:",
-          validatedData.email,
-        );
+        console.log("[register] Local DB user created successfully");
       } else {
-        console.log(
-          "[register] Local DB user already exists for:",
-          validatedData.email,
-        );
+        console.log("[register] Local DB user already exists");
       }
     } catch (dbError) {
       console.error(
         "[register] Failed to create local DB user (non-blocking):",
-        dbError,
+        dbError instanceof Error ? dbError.message : "Unknown DB error",
       );
       // Do not return failed — Auth succeeded, so we proceed to sign in
     }
@@ -156,17 +148,17 @@ export const register = async (
       redirect: false,
     });
 
-    console.log(
-      "[register] Registration and sign-in completed for:",
-      validatedData.email,
-    );
+    console.log("[register] Registration and sign-in completed successfully");
     return { status: "success" };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { status: "invalid_data" };
     }
 
-    console.error("[register] Unexpected error during registration:", error);
+    console.error(
+      "[register] Unexpected error during registration:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
     return { status: "failed" };
   }
 };
