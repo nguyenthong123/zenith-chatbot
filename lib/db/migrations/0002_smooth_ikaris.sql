@@ -14,7 +14,11 @@ ALTER TABLE "price_lists" ALTER COLUMN "id" DROP DEFAULT;--> statement-breakpoin
 ALTER TABLE "price_lists" ALTER COLUMN "ownerId" SET DATA TYPE uuid;--> statement-breakpoint
 ALTER TABLE "products" ALTER COLUMN "id" SET DATA TYPE text;--> statement-breakpoint
 ALTER TABLE "products" ALTER COLUMN "id" DROP DEFAULT;--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "ownerId" uuid;--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'ownerId') THEN
+        ALTER TABLE "products" ADD COLUMN "ownerId" uuid;
+    END IF;
+END $$;--> statement-breakpoint
 -- Cleanup orphans
 UPDATE "price_lists" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
 UPDATE "products" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
