@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { createUser, getUser } from "@/lib/db/queries";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { signIn } from "./auth";
 
@@ -25,6 +26,18 @@ export const login = async (
       password: formData.get("password"),
     });
 
+    // Authenticate with Supabase Auth
+    const supabase = await createSupabaseServerClient();
+    const { error: supabaseError } = await supabase.auth.signInWithPassword({
+      email: validatedData.email,
+      password: validatedData.password,
+    });
+
+    if (supabaseError) {
+      return { status: "failed" };
+    }
+
+    // Also sign in with NextAuth to maintain app session
     await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
@@ -61,12 +74,43 @@ export const register = async (
       password: formData.get("password"),
     });
 
-    const [user] = await getUser(validatedData.email);
+    // Sign up with Supabase Auth
+    const supabase = await createSupabaseServerClient();
+    const { data: supabaseData, error: supabaseError } =
+      await supabase.auth.signUp({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
 
-    if (user) {
-      return { status: "user_exists" } as RegisterActionState;
+    if (supabaseError) {
+      // Supabase returns error for duplicate emails
+      if (
+        supabaseError.code === "user_already_exists" ||
+        supabaseError.message?.includes("already registered")
+      ) {
+        return { status: "user_exists" };
+      }
+      return { status: "failed" };
     }
-    await createUser(validatedData.email, validatedData.password);
+
+    // When "Confirm email" is disabled in Supabase project settings,
+    // signing up with an existing email does not return an error.
+    // Instead, Supabase returns a user object with an empty identities array.
+    // See: https://supabase.com/docs/reference/javascript/auth-signup
+    if (
+      supabaseData?.user?.identities &&
+      supabaseData.user.identities.length === 0
+    ) {
+      return { status: "user_exists" };
+    }
+
+    // Also create user in the local database for app data
+    const [existingUser] = await getUser(validatedData.email);
+    if (!existingUser) {
+      await createUser(validatedData.email, validatedData.password);
+    }
+
+    // Sign in with NextAuth to maintain app session
     await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,

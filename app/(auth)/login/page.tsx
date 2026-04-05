@@ -7,7 +7,6 @@ import { useActionState, useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/chat/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
-import { toast } from "@/components/chat/toast";
 import { type LoginActionState, login } from "../actions";
 
 export default function Page() {
@@ -22,19 +21,19 @@ export default function Page() {
 
   const { update: updateSession } = useSession();
 
+  const errorMessage =
+    state.status === "failed"
+      ? "Email hoặc mật khẩu không đúng!"
+      : state.status === "invalid_data"
+        ? "Dữ liệu không hợp lệ!"
+        : null;
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
-    if (state.status === "failed") {
-      toast({ type: "error", description: "Invalid credentials!" });
-    } else if (state.status === "invalid_data") {
-      toast({
-        type: "error",
-        description: "Failed validating your submission!",
-      });
-    } else if (state.status === "success") {
+    if (state.status === "success") {
       setIsSuccessful(true);
       updateSession();
-      router.refresh();
+      router.push("/");
     }
   }, [state.status]);
 
@@ -50,6 +49,7 @@ export default function Page() {
         Sign in to your account to continue
       </p>
       <AuthForm action={handleSubmit} defaultEmail={email}>
+        {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
         <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
           {"No account? "}
