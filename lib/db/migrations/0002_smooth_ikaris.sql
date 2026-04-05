@@ -15,5 +15,19 @@ ALTER TABLE "price_lists" ALTER COLUMN "ownerId" SET DATA TYPE uuid;--> statemen
 ALTER TABLE "products" ALTER COLUMN "id" SET DATA TYPE text;--> statement-breakpoint
 ALTER TABLE "products" ALTER COLUMN "id" DROP DEFAULT;--> statement-breakpoint
 ALTER TABLE "products" ADD COLUMN "ownerId" uuid;--> statement-breakpoint
-ALTER TABLE "price_lists" ADD CONSTRAINT "price_lists_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "products" ADD CONSTRAINT "products_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+-- Cleanup orphans
+UPDATE "price_lists" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
+UPDATE "products" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
+
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'price_lists_ownerId_users_id_fk') THEN
+        ALTER TABLE "price_lists" ADD CONSTRAINT "price_lists_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'products_ownerId_users_id_fk') THEN
+        ALTER TABLE "products" ADD CONSTRAINT "products_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;

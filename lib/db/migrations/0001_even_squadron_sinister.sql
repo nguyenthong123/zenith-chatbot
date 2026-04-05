@@ -186,22 +186,120 @@ CREATE TABLE IF NOT EXISTS "Vote_v2" (
 	CONSTRAINT "Vote_v2_chatId_messageId_pk" PRIMARY KEY("chatId","messageId")
 );
 --> statement-breakpoint
-ALTER TABLE "cash_book" ADD CONSTRAINT "cash_book_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Chat" ADD CONSTRAINT "Chat_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "customers" ADD CONSTRAINT "customers_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "knowledge_base" ADD CONSTRAINT "knowledge_base_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Message_v2" ADD CONSTRAINT "Message_v2_chatId_Chat_id_fk" FOREIGN KEY ("chatId") REFERENCES "public"."Chat"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_customerId_customers_id_fk" FOREIGN KEY ("customerId") REFERENCES "public"."customers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payments" ADD CONSTRAINT "payments_customerId_customers_id_fk" FOREIGN KEY ("customerId") REFERENCES "public"."customers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payments" ADD CONSTRAINT "payments_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Stream" ADD CONSTRAINT "Stream_chatId_Chat_id_fk" FOREIGN KEY ("chatId") REFERENCES "public"."Chat"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Suggestion" ADD CONSTRAINT "Suggestion_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Suggestion" ADD CONSTRAINT "Suggestion_documentId_documentCreatedAt_Document_id_createdAt_fk" FOREIGN KEY ("documentId","documentCreatedAt") REFERENCES "public"."Document"("id","createdAt") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_memories" ADD CONSTRAINT "user_memories_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Vote_v2" ADD CONSTRAINT "Vote_v2_chatId_Chat_id_fk" FOREIGN KEY ("chatId") REFERENCES "public"."Chat"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "Vote_v2" ADD CONSTRAINT "Vote_v2_messageId_Message_v2_id_fk" FOREIGN KEY ("messageId") REFERENCES "public"."Message_v2"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+-- Cleanup orphans
+UPDATE "cash_book" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
+DELETE FROM "Chat" WHERE "userId" NOT IN (SELECT "id" FROM "users");
+UPDATE "customers" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
+DELETE FROM "Document" WHERE "userId" NOT IN (SELECT "id" FROM "users");
+UPDATE "knowledge_base" SET "userId" = NULL WHERE "userId" NOT IN (SELECT "id" FROM "users") AND "userId" IS NOT NULL;
+DELETE FROM "Message_v2" WHERE "chatId" NOT IN (SELECT "id" FROM "Chat");
+UPDATE "orders" SET "customerId" = NULL WHERE "customerId" NOT IN (SELECT "id" FROM "customers") AND "customerId" IS NOT NULL;
+UPDATE "orders" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
+UPDATE "payments" SET "customerId" = NULL WHERE "customerId" NOT IN (SELECT "id" FROM "customers") AND "customerId" IS NOT NULL;
+UPDATE "payments" SET "ownerId" = NULL WHERE "ownerId" NOT IN (SELECT "id" FROM "users") AND "ownerId" IS NOT NULL;
+DELETE FROM "Stream" WHERE "chatId" NOT IN (SELECT "id" FROM "Chat");
+DELETE FROM "Suggestion" WHERE "userId" NOT IN (SELECT "id" FROM "users");
+DELETE FROM "Suggestion" WHERE ("documentId", "documentCreatedAt") NOT IN (SELECT "id", "createdAt" FROM "Document");
+DELETE FROM "user_memories" WHERE "userId" NOT IN (SELECT "id" FROM "users");
+DELETE FROM "Vote_v2" WHERE "chatId" NOT IN (SELECT "id" FROM "Chat");
+DELETE FROM "Vote_v2" WHERE "messageId" NOT IN (SELECT "id" FROM "Message_v2");
+
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'cash_book_ownerId_users_id_fk') THEN
+        ALTER TABLE "cash_book" ADD CONSTRAINT "cash_book_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Chat_userId_users_id_fk') THEN
+        ALTER TABLE "Chat" ADD CONSTRAINT "Chat_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'customers_ownerId_users_id_fk') THEN
+        ALTER TABLE "customers" ADD CONSTRAINT "customers_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Document_userId_users_id_fk') THEN
+        ALTER TABLE "Document" ADD CONSTRAINT "Document_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'knowledge_base_userId_users_id_fk') THEN
+        ALTER TABLE "knowledge_base" ADD CONSTRAINT "knowledge_base_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Message_v2_chatId_Chat_id_fk') THEN
+        ALTER TABLE "Message_v2" ADD CONSTRAINT "Message_v2_chatId_Chat_id_fk" FOREIGN KEY ("chatId") REFERENCES "public"."Chat"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'orders_customerId_customers_id_fk') THEN
+        ALTER TABLE "orders" ADD CONSTRAINT "orders_customerId_customers_id_fk" FOREIGN KEY ("customerId") REFERENCES "public"."customers"("id") ON DELETE set null ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'orders_ownerId_users_id_fk') THEN
+        ALTER TABLE "orders" ADD CONSTRAINT "orders_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payments_customerId_customers_id_fk') THEN
+        ALTER TABLE "payments" ADD CONSTRAINT "payments_customerId_customers_id_fk" FOREIGN KEY ("customerId") REFERENCES "public"."customers"("id") ON DELETE set null ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payments_ownerId_users_id_fk') THEN
+        ALTER TABLE "payments" ADD CONSTRAINT "payments_ownerId_users_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Stream_chatId_Chat_id_fk') THEN
+        ALTER TABLE "Stream" ADD CONSTRAINT "Stream_chatId_Chat_id_fk" FOREIGN KEY ("chatId") REFERENCES "public"."Chat"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Suggestion_userId_users_id_fk') THEN
+        ALTER TABLE "Suggestion" ADD CONSTRAINT "Suggestion_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Suggestion_documentId_documentCreatedAt_Document_id_createdAt_fk') THEN
+        ALTER TABLE "Suggestion" ADD CONSTRAINT "Suggestion_documentId_documentCreatedAt_Document_id_createdAt_fk" FOREIGN KEY ("documentId","documentCreatedAt") REFERENCES "public"."Document"("id","createdAt") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_memories_userId_users_id_fk') THEN
+        ALTER TABLE "user_memories" ADD CONSTRAINT "user_memories_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Vote_v2_chatId_Chat_id_fk') THEN
+        ALTER TABLE "Vote_v2" ADD CONSTRAINT "Vote_v2_chatId_Chat_id_fk" FOREIGN KEY ("chatId") REFERENCES "public"."Chat"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Vote_v2_messageId_Message_v2_id_fk') THEN
+        ALTER TABLE "Vote_v2" ADD CONSTRAINT "Vote_v2_messageId_Message_v2_id_fk" FOREIGN KEY ("messageId") REFERENCES "public"."Message_v2"("id") ON DELETE no action ON UPDATE no action;
+    END IF;
+END $$;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "cash_date_idx" ON "cash_book" USING btree ("date");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "cash_owner_idx" ON "cash_book" USING btree ("ownerId");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "customer_owner_idx" ON "customers" USING btree ("ownerId","id");--> statement-breakpoint
