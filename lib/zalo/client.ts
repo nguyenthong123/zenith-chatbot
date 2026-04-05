@@ -29,20 +29,22 @@ export class ZaloClient {
     // 2. Thử lấy từ Database
     const config = await getZaloConfig();
     if (config && config.expiresAt.getTime() > now.getTime() + buffer) {
-      console.log("[ZaloClient] Using valid token from Database.");
       this.accessToken = config.accessToken;
       this.refreshToken = config.refreshToken;
       this.expiresAt = config.expiresAt;
+      console.log(
+        `[ZaloClient] Using token from DB (Preview: ${this.accessToken?.substring(0, 8)}...)`,
+      );
       return this.accessToken;
     }
 
-    // 3. Ưu tiên: Nếu ENV có token MỚI hơn cái đang có trong memory/DB (giả sử user vừa cập nhật .env)
+    // 3. Ưu tiên: Nếu ENV có token MỚI hơn cái đang có (user vừa cập nhật Dashboard Vercel)
     const envAt = process.env.ZALO_ACCESS_TOKEN;
     const envRt = process.env.ZALO_REFRESH_TOKEN;
 
     if (envAt && envAt !== this.accessToken && envAt !== config?.accessToken) {
       console.log(
-        "[ZaloClient] New token detected in ENV. Updating storage...",
+        `[ZaloClient] New token detected in ENV (Preview: ${envAt.substring(0, 8)}...). Updating storage...`,
       );
       const initialExpiresAt = new Date(Date.now() + 3600 * 1000); // 1h
 
