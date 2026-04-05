@@ -1,3 +1,10 @@
+import { ChatShell } from "@/components/chat/shell";
+import { ActiveChatProvider } from "@/hooks/use-active-chat";
+
 export default function Page() {
-  return null;
+  return (
+    <ActiveChatProvider>
+      <ChatShell />
+    </ActiveChatProvider>
+  );
 }

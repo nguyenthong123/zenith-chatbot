@@ -13,7 +13,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (
-    pathname.includes("/api/auth") ||
+    pathname.startsWith("/api/auth") ||
     pathname.includes("/api/webhooks") ||
     pathname.includes("/api/zalo") ||
     pathname.startsWith("/login") ||

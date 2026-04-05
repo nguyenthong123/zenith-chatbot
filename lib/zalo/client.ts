@@ -64,25 +64,37 @@ export class ZaloClient {
     const refreshKey = config?.refreshToken || envRt;
     if (refreshKey) {
       try {
+        console.log("[ZaloClient] Access token expired. Attempting refresh...");
         return await this.refreshAccessToken(refreshKey);
-      } catch (error) {
-        console.error("[ZaloClient] Automated periodic refresh failed:", error);
+      } catch (error: any) {
+        console.error(
+          `[ZaloClient] Automated refresh failed: ${error.message}`,
+        );
       }
     }
 
     // Final fallback
-    if (this.accessToken) return this.accessToken;
+    if (this.accessToken) {
+      console.warn(
+        "[ZaloClient] Using expired memory token as fallback (no refresh key available).",
+      );
+      return this.accessToken;
+    }
 
     if (envAt) {
       console.warn(
-        "[ZaloClient] Falling back to ENV Access Token without Refresh capability.",
+        "[ZaloClient] Using ENV Access Token without Refresh capability.",
       );
       this.accessToken = envAt;
       return envAt;
     }
 
+    console.error(
+      "[ZaloClient] CRITICAL: No valid tokens found and no Refresh Token (ZALO_REFRESH_TOKEN) is configured. The bot will not be able to reply until a new token is provided.",
+    );
+
     throw new Error(
-      "Không tìm thấy Zalo Access Token hợp lệ. Vui lòng kiểm tra ZALO_ACCESS_TOKEN và ZALO_REFRESH_TOKEN.",
+      "BOT_AUTH_ERROR: Missing Zalo Access Token or Refresh Token.",
     );
   }
 
@@ -90,14 +102,12 @@ export class ZaloClient {
    * Gọi API Zalo để đổi Refresh Token lấy cặp Token mới
    */
   async refreshAccessToken(currentRefreshToken: string): Promise<string> {
-    console.log("[ZaloClient] Requesting new access token from Zalo OAuth...");
+    console.log("[ZaloClient] Sending refresh request to Zalo...");
     const appId = process.env.ZALO_APP_ID;
     const appSecret = process.env.ZALO_APP_SECRET;
 
     if (!appId || !appSecret) {
-      throw new Error(
-        "Thiếu cấu hình ZALO_APP_ID hoặc ZALO_APP_SECRET trong Environment Variables.",
-      );
+      throw new Error("Missing ZALO_APP_ID or ZALO_APP_SECRET in ENV.");
     }
 
     const response = await fetch("https://oauth.zalo.me/v2.0/access_token", {
@@ -116,7 +126,7 @@ export class ZaloClient {
     const result = await response.json();
 
     if (result.error) {
-      console.error("[ZaloClient] Zalo OAuth Refresh Error:", result);
+      console.error("[ZaloClient] Refresh error from Zalo:", result);
       throw new Error(`Zalo Refresh Failed: ${result.message || result.error}`);
     }
 
@@ -125,7 +135,7 @@ export class ZaloClient {
     const expiresIn = parseInt(result.expires_in) || 3600;
     const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
-    // Lưu vào Database để các instance khác dùng chung
+    // Lưu vào Database
     await setZaloConfig({
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
@@ -137,7 +147,7 @@ export class ZaloClient {
     this.expiresAt = expiresAt;
 
     console.log(
-      `[ZaloClient] Token refreshed successfully. Valid until: ${expiresAt.toISOString()}`,
+      `[ZaloClient] Token refreshed. Valid until: ${expiresAt.toLocaleString()}`,
     );
     return newAccessToken;
   }
@@ -146,54 +156,46 @@ export class ZaloClient {
    * Gửi tin nhắn văn bản
    */
   async sendText(userId: string, text: string) {
-    const token = await this.ensureValidToken();
+    try {
+      const token = await this.ensureValidToken();
 
-    const payload = {
-      recipient: {
-        user_id: userId,
-      },
-      message: {
-        text: text,
-      },
-    };
+      const payload = {
+        recipient: { user_id: userId },
+        message: { text },
+      };
 
-    let result = await this.post(
-      "https://openapi.zalo.me/v2.0/oa/message",
-      payload,
-      token,
-    );
-
-    // Xử lý lỗi Token hết hạn bất ngờ (-216: Access token invalid)
-    if (result.error === -216 || result.error === -201) {
-      console.warn(
-        "[ZaloClient] Token invalid/expired. Attempting real-time refresh...",
+      let result = await this.post(
+        "https://openapi.zalo.me/v2.0/oa/message",
+        payload,
+        token,
       );
-      const config = await getZaloConfig();
-      const refreshKey = config?.refreshToken || process.env.ZALO_REFRESH_TOKEN;
 
-      if (refreshKey) {
-        try {
+      // Retry once if token is rejected by API (-216: Invalid token)
+      if (result.error === -216 || result.error === -201) {
+        console.warn("[ZaloClient] Token rejected by API. Forcing refresh...");
+        const config = await getZaloConfig();
+        const refreshKey =
+          config?.refreshToken || process.env.ZALO_REFRESH_TOKEN;
+
+        if (refreshKey) {
           const newToken = await this.refreshAccessToken(refreshKey);
-          console.log("[ZaloClient] Retrying send message with new token...");
           result = await this.post(
             "https://openapi.zalo.me/v2.0/oa/message",
             payload,
             newToken,
           );
-        } catch (refreshError: any) {
+        } else {
           console.error(
-            "[ZaloClient] Critical: Refresh failed during retry:",
-            refreshError.message,
+            "[ZaloClient] No Refresh Token found. Cannot retry send.",
           );
         }
-      } else {
-        console.error(
-          "[ZaloClient] No Refresh Token found in DB or ENV. Cannot auto-refresh.",
-        );
       }
-    }
 
-    return result;
+      return result;
+    } catch (err: any) {
+      console.error(`[ZaloClient] Failed to send message: ${err.message}`);
+      return { error: -1, message: err.message };
+    }
   }
 
   private async post(url: string, data: any, token: string) {
