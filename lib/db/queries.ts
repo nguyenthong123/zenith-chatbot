@@ -1,4 +1,4 @@
-import "server-only";
+// import "server-only";
 
 import {
   and,
@@ -11,14 +11,17 @@ import {
   ilike,
   inArray,
   lt,
+  lte,
+  or,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { ChatbotError } from "../errors";
-import { generateUUID } from "../utils";
+import { convertToUIMessages, generateUUID, isValidUUID } from "../utils";
 import {
   type Chat,
   chat,
@@ -26,9 +29,12 @@ import {
   document,
   knowledgeBase,
   message,
+  order,
+  payment,
   type Suggestion,
   stream,
   suggestion,
+  systemConfig,
   type User,
   user,
   userMemory,
@@ -81,11 +87,13 @@ export async function updateUserZaloId(userId: string, zaloId: string) {
   }
 }
 
-export async function createUser(email: string, password: string) {
+export async function createUser(email: string, password: string, id?: string) {
   const hashedPassword = generateHashedPassword(password);
 
   try {
-    return await db.insert(user).values({ email, password: hashedPassword });
+    return await db
+      .insert(user)
+      .values({ id, email, password: hashedPassword });
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to create user");
   }
@@ -113,6 +121,19 @@ export async function createGuestUser(id?: string) {
       "bad_request:database",
       "Failed to create guest user",
     );
+  }
+}
+
+export async function updateUserPassword(email: string, password: string) {
+  const hashedPassword = generateHashedPassword(password);
+
+  try {
+    return await db
+      .update(user)
+      .set({ password: hashedPassword })
+      .where(eq(user.email, email));
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to update password");
   }
 }
 
@@ -153,10 +174,12 @@ export async function deleteChatById({ id }: { id: string }) {
       .returning();
     return chatsDeleted;
   } catch (error) {
-    console.error("Database error in deleteChatById:", error);
+    console.error("Database error in getChatById:", error);
     throw new ChatbotError(
-      "bad_request:database",
-      "Failed to delete chat by id",
+      "bad_request:api",
+      error instanceof Error
+        ? `${error.message}\n${error.stack}`
+        : String(error),
     );
   }
 }
@@ -201,9 +224,21 @@ export async function getChatsByUserId({
 }: {
   id: string;
   limit: number;
-  startingAfter: string | null;
-  endingBefore: string | null;
+  startingAfter?: string | null;
+  endingBefore?: string | null;
 }) {
+  if (!isValidUUID(id)) {
+    return { chats: [], hasMore: false };
+  }
+
+  if (startingAfter && !isValidUUID(startingAfter)) {
+    startingAfter = null;
+  }
+
+  if (endingBefore && !isValidUUID(endingBefore)) {
+    endingBefore = null;
+  }
+
   try {
     const extendedLimit = limit + 1;
 
@@ -271,6 +306,10 @@ export async function getChatsByUserId({
 }
 
 export async function getChatById({ id }: { id: string }) {
+  if (!isValidUUID(id)) {
+    return null;
+  }
+
   try {
     const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
     if (!selectedChat) {
@@ -309,6 +348,10 @@ export async function updateMessage({
 }
 
 export async function getMessagesByChatId({ id }: { id: string }) {
+  if (!isValidUUID(id)) {
+    return [];
+  }
+
   try {
     return await db
       .select()
@@ -708,18 +751,101 @@ export async function saveUserMemory(userId: string, content: string) {
 
 export async function searchKnowledgeBase(query?: string) {
   try {
-    // Basic text search if no vector searching is set up yet
-    if (!query) {
-      return await db.select().from(knowledgeBase).limit(10);
+    const keywords = query
+      ? query
+          .split(/\s+/)
+          .filter((k) => k.length > 2)
+          .map((k) => `%${k}%`)
+      : [];
+
+    // 1. Search in knowledgeBase table
+    let kbResults = [];
+    if (keywords.length === 0) {
+      kbResults = await db.select().from(knowledgeBase).limit(10);
+    } else {
+      // Create parallel conditions for better matching
+      const conditions = keywords.map((k) => ilike(knowledgeBase.content, k));
+      kbResults = await db
+        .select()
+        .from(knowledgeBase)
+        .where(or(...conditions)) // Or for broader reach, let the AI rank
+        .limit(10);
     }
-    // Simple ILIKE search across content and metadata
-    return await db
-      .select()
-      .from(knowledgeBase)
-      .where(ilike(knowledgeBase.content, `%${query}%`))
-      .limit(10);
+
+    // 2. Search in Documents table (technical guides/artifacts)
+    let docResults = [];
+    if (keywords.length === 0) {
+      docResults = await db
+        .select()
+        .from(document)
+        .where(eq(document.kind, "text"))
+        .orderBy(desc(document.createdAt))
+        .limit(10);
+    } else {
+      const titleConditions = keywords.map((k) => ilike(document.title, k));
+      const contentConditions = keywords.map((k) => ilike(document.content, k));
+      docResults = await db
+        .select()
+        .from(document)
+        .where(
+          and(
+            eq(document.kind, "text"),
+            or(...titleConditions, ...contentConditions),
+          ),
+        )
+        .orderBy(desc(document.createdAt))
+        .limit(10);
+    }
+
+    // Combine results
+    const combined = [
+      ...kbResults.map((r) => ({
+        content: r.content,
+        title: (r.metadata as any)?.title || "General Knowledge",
+        source: "knowledge_base",
+        createdAt: r.createdAt,
+      })),
+      ...docResults.map((r) => ({
+        content: r.content,
+        title: r.title,
+        source: "document",
+        createdAt: r.createdAt,
+      })),
+    ];
+
+    return combined.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   } catch (_error) {
+    console.error("searchKnowledgeBase error:", _error);
     return [];
+  }
+}
+
+export async function saveKnowledgeBaseItem({
+  content,
+  userId,
+  metadata,
+}: {
+  content: string;
+  userId?: string;
+  metadata?: any;
+}) {
+  try {
+    return await db
+      .insert(knowledgeBase)
+      .values({
+        content,
+        userId,
+        metadata,
+      })
+      .returning();
+  } catch (error) {
+    console.error("Database error in saveKnowledgeBaseItem:", error);
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to save knowledge base item",
+    );
   }
 }
 
@@ -763,5 +889,94 @@ export async function setZaloConfig({
   } catch (error) {
     console.error("Database error in setZaloConfig:", error);
     throw new ChatbotError("bad_request:database", "Failed to set zalo config");
+  }
+}
+export async function getSystemConfig() {
+  try {
+    const [config] = await db.select().from(systemConfig).limit(1);
+    return config || null;
+  } catch (error) {
+    console.error("Database error in getSystemConfig:", error);
+    return null;
+  }
+}
+
+export async function getPayments({
+  userId,
+  userRole,
+  customerName,
+  startDate,
+  endDate,
+}: {
+  userId: string;
+  userRole: string;
+  customerName?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  try {
+    const conditions = [];
+
+    if (customerName) {
+      conditions.push(ilike(payment.customerName, `%${customerName}%`));
+    }
+    if (startDate) {
+      conditions.push(gte(payment.date, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(payment.date, endDate));
+    }
+    if (userRole !== "admin") {
+      conditions.push(eq(payment.ownerId, userId));
+    }
+
+    return await db
+      .select()
+      .from(payment)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(payment.date))
+      .limit(50);
+  } catch (error) {
+    console.error("Database error in getPayments:", error);
+    return [];
+  }
+}
+
+export async function searchMessages({
+  userId,
+  query,
+}: {
+  userId: string;
+  query: string;
+}) {
+  try {
+    const keywords = query
+      .split(/\s+/)
+      .filter((k) => k.length > 2)
+      .map((k) => `%${k}%`);
+
+    if (keywords.length === 0) return [];
+
+    const conditions = keywords.map(
+      (k) => sql`CAST(${message.parts} AS TEXT) ILIKE ${k}`,
+    );
+
+    return await db
+      .select({
+        messageId: message.id,
+        chatId: message.chatId,
+        role: message.role,
+        parts: message.parts,
+        createdAt: message.createdAt,
+        chatTitle: chat.title,
+      })
+      .from(message)
+      .innerJoin(chat, eq(message.chatId, chat.id))
+      .where(and(eq(chat.userId, userId), or(...conditions)))
+      .orderBy(desc(message.createdAt))
+      .limit(20);
+  } catch (error) {
+    console.error("Database error in searchMessages:", error);
+    return [];
   }
 }

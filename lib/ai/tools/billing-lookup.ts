@@ -1,13 +1,17 @@
 import { tool } from "ai";
-import { and, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import { order, type Payment, payment } from "@/lib/db/schema";
 
-export const getBillingLookup = (userId: string, userRole: string) =>
+export const getBillingLookup = (
+  userId: string,
+  userRole: string,
+  userEmail?: string,
+) =>
   tool({
     description:
-      "Check for customer payments and calculate current debt. Use this to respond to questions like 'What is my current debt?' or 'Has customer X paid?'. Leave all fields empty to get a total debt summary for current account.",
+      "Check for customer payments and calculate current debt in the Supabase database. Use this to respond to questions like 'What is my current debt?' or 'Has customer X paid?'. Leave all fields empty to get a total debt summary for current account.",
     inputSchema: z.object({
       customerName: z
         .string()
@@ -30,11 +34,16 @@ export const getBillingLookup = (userId: string, userRole: string) =>
           );
         }
 
-        // Role-based data isolation
-        if (userRole !== "admin") {
-          orderConditions.push(eq(order.ownerId, userId));
-          paymentConditions.push(eq(payment.ownerId, userId));
-        }
+        // Mandatory account isolation by email/ID
+        orderConditions.push(
+          or(eq(order.ownerId, userId), eq(order.ownerEmail, userEmail ?? "")),
+        );
+        paymentConditions.push(
+          or(
+            eq(payment.ownerId, userId),
+            eq(payment.ownerEmail, userEmail ?? ""),
+          ),
+        );
 
         // 1. Calculate total ordered amount
         const [orderStats] = await db
@@ -81,6 +90,7 @@ export const getBillingLookup = (userId: string, userRole: string) =>
             date: p.date,
             method: p.paymentMethod,
             note: p.note,
+            proofImage: p.proofImage, // Added this field
             createdBy: p.createdBy,
             createdByEmail: p.createdByEmail,
             ownerEmail: p.ownerEmail,

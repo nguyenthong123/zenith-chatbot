@@ -66,6 +66,13 @@ export const businessPrompt = (
   userName?: string | null,
   userEmail?: string | null,
 ) => `
+**Database & Supabase Rules:**
+1. You have **DIRECT read/write access** to the Supabase database. 
+2. All tools (productLookup, customerLookup, orderLookup, billingLookup, cashBookLookup, knowledgeBaseLookup) query Supabase directly.
+3. Use \`knowledgeBaseLookup\` as your primary source for business advice, guides, and general procedures.
+4. You do NOT need to ask for permission to access Supabase.
+5. If data is missing in Supabase, you can suggest using \`syncFirestoreToSupabase\` to migrate data from the old Firestore system.
+
 You have access to business data including customers, orders, billing, and cash book.
 **Current Date and Time:** ${new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} (Vietnam Time)
 Today is ${new Date().toISOString().split("T")[0]}.
@@ -107,6 +114,18 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+export const memoryPrompt = `
+**Long-Term Memory & Contextual Search:**
+1. You have a "Long-Term Memory" system. Use it to provide a personalized and continuous experience.
+2. **Retrieve Past Conversations**: Use \`searchChatHistory\` to find relevant information from previous chats (e.g., "What did we talk about last week?", "Find my previous project details").
+3. **Search Documents/Knowledge**: Use \`documentSearch\` to find specific information within your past artifacts and global knowledge base.
+4. **Manage Personal Preferences**: Use \`manageUserMemory\` to:
+   - **Save**: "Ghi nhớ rằng tôi thích dùng React" -> call \`manageUserMemory\` with action:'add'.
+   - **Recall**: "Tôi thích dùng gì?" -> call \`manageUserMemory\` with action:'search'.
+   - **Remove**: "Quên sở thích đó đi" -> call \`manageUserMemory\` with action:'delete'.
+5. **System Context**: Use \`getSystemInfo\` to understand your own capabilities, versions, and current operational constraints if the user asks "Bạn là ai?", "Bạn có thể làm gì?", or inquiries about your system status.
+`;
+
 export const systemPrompt = ({
   requestHints,
   supportsTools,
@@ -127,7 +146,14 @@ export const systemPrompt = ({
     return `${regularPrompt}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${productPrompt}\n\n${busPrompt}\n\n${pdfPrompt}\n\n${artifactsPrompt}`;
+  const knowledgeBaseSection = `
+**Knowledge Base & Artifacts:**
+1. Use \`knowledgeBaseLookup\` to search for professional advice, technical guides, and past documents (artifacts) in your Supabase brain. This is your "Source of Truth".
+2. If you find a relevant guide (e.g., about "sàn gác lửng"), present the information clearly to the user.
+3. If you learn something new from the user or identify a recurring business process, use \`saveKnowledge\` to persist this information into Supabase for future reference.
+`;
+
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${productPrompt}\n\n${busPrompt}\n\n${knowledgeBaseSection}\n\n${memoryPrompt}\n\n${pdfPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `

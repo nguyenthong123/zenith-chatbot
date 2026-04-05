@@ -1,5 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
+import { ChatbotError } from "@/lib/errors";
 import { convertToUIMessages } from "@/lib/utils";
 
 export async function GET(request: Request) {
@@ -10,34 +11,43 @@ export async function GET(request: Request) {
     return Response.json({ error: "chatId required" }, { status: 400 });
   }
 
-  const [session, chat, messages] = await Promise.all([
-    auth(),
-    getChatById({ id: chatId }),
-    getMessagesByChatId({ id: chatId }),
-  ]);
+  try {
+    const [session, chat, messages] = await Promise.all([
+      auth(),
+      getChatById({ id: chatId }),
+      getMessagesByChatId({ id: chatId }),
+    ]);
 
-  if (!chat) {
+    if (!chat) {
+      return Response.json({
+        messages: [],
+        visibility: "private",
+        userId: null,
+        isReadonly: false,
+      });
+    }
+
+    if (
+      chat.visibility === "private" &&
+      (!session?.user || session.user.id !== chat.userId)
+    ) {
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    }
+
+    const isReadonly = !session?.user || session.user.id !== chat.userId;
+
     return Response.json({
-      messages: [],
-      visibility: "private",
-      userId: null,
-      isReadonly: false,
+      messages: convertToUIMessages(messages),
+      visibility: chat.visibility,
+      userId: chat.userId,
+      isReadonly,
     });
+  } catch (error) {
+    if (error instanceof ChatbotError) {
+      return error.toResponse();
+    }
+
+    console.error("Unhandled error in api/messages:", error);
+    return new ChatbotError("bad_request:api").toResponse();
   }
-
-  if (
-    chat.visibility === "private" &&
-    (!session?.user || session.user.id !== chat.userId)
-  ) {
-    return Response.json({ error: "forbidden" }, { status: 403 });
-  }
-
-  const isReadonly = !session?.user || session.user.id !== chat.userId;
-
-  return Response.json({
-    messages: convertToUIMessages(messages),
-    visibility: chat.visibility,
-    userId: chat.userId,
-    isReadonly,
-  });
 }

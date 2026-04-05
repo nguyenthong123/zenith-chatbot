@@ -20,8 +20,8 @@ export const user = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().notNull().defaultRandom(),
-    email: varchar("email", { length: 64 }).notNull(),
-    password: varchar("password", { length: 64 }),
+    email: varchar("email", { length: 255 }).notNull(),
+    password: varchar("password", { length: 255 }),
     name: text("name"),
     displayName: text("displayName"),
     photoUrl: text("photoUrl"),
@@ -101,13 +101,11 @@ export type Vote = typeof vote.$inferSelect;
 export const document = pgTable(
   "Document",
   {
-    id: uuid("id").notNull().defaultRandom(),
+    id: uuid("id").notNull(),
     createdAt: timestamp("createdAt").notNull(),
     title: text("title").notNull(),
+    kind: text("kind").notNull(),
     content: text("content"),
-    kind: varchar("text", { enum: ["text", "code", "image", "sheet"] })
-      .notNull()
-      .default("text"),
     userId: uuid("userId")
       .notNull()
       .references(() => user.id),
@@ -128,7 +126,7 @@ export const suggestion = pgTable(
     originalText: text("originalText").notNull(),
     suggestedText: text("suggestedText").notNull(),
     description: text("description"),
-    isResolved: boolean("isResolved").notNull().default(false),
+    isCurrent: boolean("isCurrent").notNull().default(true),
     userId: uuid("userId")
       .notNull()
       .references(() => user.id),
@@ -150,6 +148,7 @@ export const stream = pgTable(
   {
     id: uuid("id").notNull().defaultRandom(),
     chatId: uuid("chatId").notNull(),
+    content: text("content").notNull().default(""),
     createdAt: timestamp("createdAt").notNull(),
   },
   (table) => ({

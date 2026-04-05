@@ -1,13 +1,17 @@
 import { tool } from "ai";
-import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import { type Order, order } from "@/lib/db/schema";
 
-export const getOrderLookup = (userId: string, userRole: string) =>
+export const getOrderLookup = (
+  userId: string,
+  userRole: string,
+  userEmail?: string,
+) =>
   tool({
     description:
-      "Search for orders or summarize sales performance. Use this to find orders by customer name, dates, or status. Leave all fields empty to get the latest orders for the current user/account. Provide a specific date (YYYY-MM-DD) for 'today' or 'yesterday'.",
+      "Search for orders or summarize sales performance in the Supabase database. Use this to find orders by customer name, dates, or status. Leave all fields empty to get the latest orders for the current user/account. Provide a specific date (YYYY-MM-DD) for 'today' or 'yesterday'.",
     inputSchema: z.object({
       customerName: z
         .string()
@@ -34,11 +38,12 @@ export const getOrderLookup = (userId: string, userRole: string) =>
       try {
         const conditions = [];
 
-        // Role-based data isolation
-        if (userRole !== "admin") {
-          // Regular users can only see their own data
-          conditions.push(eq(order.ownerId, userId));
-        } else if (employeeEmail) {
+        // Mandatory account isolation by email/ID
+        conditions.push(
+          or(eq(order.ownerId, userId), eq(order.ownerEmail, userEmail ?? "")),
+        );
+
+        if (userRole === "admin" && employeeEmail) {
           // Admins can filter by specific employee email
           conditions.push(eq(order.createdByEmail, employeeEmail));
         }
@@ -72,17 +77,7 @@ export const getOrderLookup = (userId: string, userRole: string) =>
           ordersCount: results.length,
           totalRevenue,
           orders: results.map((o: Order) => ({
-            orderId: o.orderId,
-            customerName: o.customerName,
-            totalAmount: o.totalAmount,
-            status: o.status,
-            date: o.date,
-            createdBy: o.createdBy,
-            createdByEmail: o.createdByEmail,
-            ownerEmail: o.ownerEmail,
-            updatedBy: o.updatedBy,
-            createdAt: o.createdAt,
-            updatedAt: o.updatedAt,
+            ...o,
           })),
         };
       } catch (error) {

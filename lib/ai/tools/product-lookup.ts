@@ -9,10 +9,14 @@ import {
   product,
 } from "@/lib/db/schema";
 
-export const getProductLookup = (userId: string, userRole: string) =>
+export const getProductLookup = (
+  userId: string,
+  userRole: string,
+  userEmail?: string,
+) =>
   tool({
     description:
-      "Search for products, prices, and price lists in the local database. Use this to answer customer questions about product availability and pricing.",
+      "Search for products, prices, and price lists in the Supabase database. Use this to answer customer questions about product availability and pricing.",
     inputSchema: z.object({
       query: z
         .string()
@@ -30,24 +34,32 @@ export const getProductLookup = (userId: string, userRole: string) =>
 
         const plConditions = [ilike(priceList.title, `%${query}%`)];
 
-        // Role-based data isolation
-        if (userRole !== "admin") {
-          conditions.push(eq(product.ownerId, userId));
-          plConditions.push(eq(priceList.ownerId, userId));
-        }
+        // Mandatory account isolation by email/ID
+        conditions.push(
+          or(
+            eq(product.ownerId, userId),
+            eq(product.ownerEmail, userEmail ?? ""),
+          ),
+        );
+        plConditions.push(
+          or(
+            eq(priceList.ownerId, userId),
+            eq(priceList.ownerEmail, userEmail ?? ""),
+          ),
+        );
 
         // 1. Search in products table
         const products = await db
           .select()
           .from(product)
-          .where(and(...conditions))
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
           .limit(10);
 
         // 2. Search in price lists table titles
         const priceLists = await db
           .select()
           .from(priceList)
-          .where(and(...plConditions))
+          .where(plConditions.length > 0 ? and(...plConditions) : undefined)
           .limit(5);
 
         if (products.length === 0 && priceLists.length === 0) {
@@ -58,19 +70,8 @@ export const getProductLookup = (userId: string, userRole: string) =>
 
         return {
           products: products.map((p: Product) => ({
-            name: p.name,
-            sku: p.sku,
-            priceSell: p.priceSell,
-            priceBuy: userRole === "admin" ? p.priceBuy : undefined, // Chỉ admin xem giá nhập
-            unit: p.unit,
-            stock: p.stock,
-            specification: p.specification,
-            category: p.category,
-            createdBy: p.createdBy,
-            createdByEmail: p.createdByEmail,
-            ownerEmail: p.ownerEmail,
-            updatedBy: p.updatedBy,
-            updatedAt: p.updatedAt,
+            ...p,
+            priceBuy: userRole === "admin" ? p.priceBuy : undefined, // Only admins see cost price
           })),
           priceLists: priceLists.map((pl: PriceList) => ({
             title: pl.title,
