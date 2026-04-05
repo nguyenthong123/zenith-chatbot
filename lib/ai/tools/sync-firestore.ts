@@ -14,7 +14,12 @@ function getFirestore() {
     if (envServiceAccount) {
       try {
         serviceAccount = JSON.parse(envServiceAccount);
-      } catch (_err) {}
+      } catch (err) {
+        console.error(
+          "Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable:",
+          err,
+        );
+      }
     }
 
     if (!serviceAccount) {
@@ -201,6 +206,10 @@ export const syncFirestoreToSupabase = tool({
             );
 
             if (error) {
+              console.error(
+                `[Sync] Failed to upsert ${id} in ${col}:`,
+                error.message,
+              );
             } else {
               synced++;
             }
@@ -219,7 +228,12 @@ export const syncFirestoreToSupabase = tool({
                 userMappings.set(id, upserted.id);
               }
             }
-          } catch (_err) {}
+          } catch (err) {
+            console.error(
+              `[Sync] Failed to sync record ${id} in ${col}:`,
+              err,
+            );
+          }
         }
         results[col] = { total: docs.length, synced, skipped };
       }
