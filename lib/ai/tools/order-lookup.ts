@@ -3,6 +3,7 @@ import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import { type Order, order } from "@/lib/db/schema";
+import { getSupabaseClient } from "@/lib/supabase/server";
 
 export const getOrderLookup = (userId: string, userRole: string) =>
   tool({
@@ -32,59 +33,30 @@ export const getOrderLookup = (userId: string, userRole: string) =>
       status,
     }) => {
       try {
-        const conditions = [];
-
-        // Role-based data isolation
-        if (userRole !== "admin") {
-          // Regular users can only see their own data
-          conditions.push(eq(order.ownerId, userId));
-        } else if (employeeEmail) {
-          // Admins can filter by specific employee email
-          conditions.push(eq(order.createdByEmail, employeeEmail));
+        // Try Supabase client first
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          return await queryWithSupabase(supabase, {
+            userId,
+            userRole,
+            customerName,
+            employeeEmail,
+            startDate,
+            endDate,
+            status,
+          });
         }
 
-        if (customerName) {
-          conditions.push(ilike(order.customerName, `%${customerName}%`));
-        }
-        if (startDate) {
-          conditions.push(gte(order.date, startDate));
-        }
-        if (endDate) {
-          conditions.push(lte(order.date, endDate));
-        }
-        if (status) {
-          conditions.push(eq(order.status, status));
-        }
-
-        const results = await db
-          .select()
-          .from(order)
-          .where(conditions.length > 0 ? and(...conditions) : undefined)
-          .orderBy(desc(order.date))
-          .limit(20);
-
-        const totalRevenue = results.reduce(
-          (acc, o) => acc + (o.totalAmount || 0),
-          0,
-        );
-
-        return {
-          ordersCount: results.length,
-          totalRevenue,
-          orders: results.map((o: Order) => ({
-            orderId: o.orderId,
-            customerName: o.customerName,
-            totalAmount: o.totalAmount,
-            status: o.status,
-            date: o.date,
-            createdBy: o.createdBy,
-            createdByEmail: o.createdByEmail,
-            ownerEmail: o.ownerEmail,
-            updatedBy: o.updatedBy,
-            createdAt: o.createdAt,
-            updatedAt: o.updatedAt,
-          })),
-        };
+        // Fallback to Drizzle ORM
+        return await queryWithDrizzle({
+          userId,
+          userRole,
+          customerName,
+          employeeEmail,
+          startDate,
+          endDate,
+          status,
+        });
       } catch (error) {
         return {
           error: "Failed to search for orders.",
@@ -93,3 +65,121 @@ export const getOrderLookup = (userId: string, userRole: string) =>
       }
     },
   });
+
+interface OrderFilters {
+  userId: string;
+  userRole: string;
+  customerName?: string;
+  employeeEmail?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+}
+
+async function queryWithSupabase(
+  supabase: ReturnType<typeof getSupabaseClient> & object,
+  filters: OrderFilters,
+) {
+  let q = supabase.from("orders").select("*");
+
+  if (filters.userRole !== "admin") {
+    q = q.eq("ownerId", filters.userId);
+  } else if (filters.employeeEmail) {
+    q = q.eq("createdByEmail", filters.employeeEmail);
+  }
+
+  if (filters.customerName) {
+    q = q.ilike("customerName", `%${filters.customerName}%`);
+  }
+  if (filters.startDate) {
+    q = q.gte("date", filters.startDate);
+  }
+  if (filters.endDate) {
+    q = q.lte("date", filters.endDate);
+  }
+  if (filters.status) {
+    q = q.eq("status", filters.status);
+  }
+
+  const { data: results } = await q
+    .order("date", { ascending: false })
+    .limit(20);
+
+  const orders = results || [];
+  const totalRevenue = orders.reduce(
+    (acc: number, o: Record<string, unknown>) =>
+      acc + (Number(o.totalAmount) || 0),
+    0,
+  );
+
+  return {
+    ordersCount: orders.length,
+    totalRevenue,
+    orders: orders.map((o: Record<string, unknown>) => ({
+      orderId: o.orderId,
+      customerName: o.customerName,
+      totalAmount: o.totalAmount,
+      status: o.status,
+      date: o.date,
+      createdBy: o.createdBy,
+      createdByEmail: o.createdByEmail,
+      ownerEmail: o.ownerEmail,
+      updatedBy: o.updatedBy,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+    })),
+  };
+}
+
+async function queryWithDrizzle(filters: OrderFilters) {
+  const conditions = [];
+
+  if (filters.userRole !== "admin") {
+    conditions.push(eq(order.ownerId, filters.userId));
+  } else if (filters.employeeEmail) {
+    conditions.push(eq(order.createdByEmail, filters.employeeEmail));
+  }
+
+  if (filters.customerName) {
+    conditions.push(ilike(order.customerName, `%${filters.customerName}%`));
+  }
+  if (filters.startDate) {
+    conditions.push(gte(order.date, filters.startDate));
+  }
+  if (filters.endDate) {
+    conditions.push(lte(order.date, filters.endDate));
+  }
+  if (filters.status) {
+    conditions.push(eq(order.status, filters.status));
+  }
+
+  const results = await db
+    .select()
+    .from(order)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(order.date))
+    .limit(20);
+
+  const totalRevenue = results.reduce(
+    (acc, o) => acc + (o.totalAmount || 0),
+    0,
+  );
+
+  return {
+    ordersCount: results.length,
+    totalRevenue,
+    orders: results.map((o: Order) => ({
+      orderId: o.orderId,
+      customerName: o.customerName,
+      totalAmount: o.totalAmount,
+      status: o.status,
+      date: o.date,
+      createdBy: o.createdBy,
+      createdByEmail: o.createdByEmail,
+      ownerEmail: o.ownerEmail,
+      updatedBy: o.updatedBy,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+    })),
+  };
+}

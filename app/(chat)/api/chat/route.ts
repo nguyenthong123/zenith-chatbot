@@ -31,8 +31,10 @@ import { getProductLookup } from "@/lib/ai/tools/product-lookup";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { getRevenueForUser } from "@/lib/ai/tools/revenue-lookup";
 import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { getUserByEmail } from "@/lib/ai/tools/user-lookup";
 import { webSearch } from "@/lib/ai/tools/web-search";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
@@ -259,6 +261,8 @@ export async function POST(request: Request) {
                   "orderLookup",
                   "billingLookup",
                   "cashBookLookup",
+                  "getUserByEmail",
+                  "getRevenueForUser",
                   "syncFirestoreToSupabase",
                 ],
           providerOptions: {
@@ -310,6 +314,8 @@ export async function POST(request: Request) {
               session.user.id,
               session.user.role || "user",
             ),
+            getUserByEmail,
+            getRevenueForUser,
             syncFirestoreToSupabase,
           },
           experimental_telemetry: {
