@@ -93,8 +93,10 @@ export const register = async (
       return { status: "failed" };
     }
 
-    // When "Confirm email" is disabled and the email already exists,
-    // Supabase may return a fake user with no identities instead of an error
+    // When "Confirm email" is disabled in Supabase project settings,
+    // signing up with an existing email does not return an error.
+    // Instead, Supabase returns a user object with an empty identities array.
+    // See: https://supabase.com/docs/reference/javascript/auth-signup
     if (
       supabaseData?.user?.identities &&
       supabaseData.user.identities.length === 0
