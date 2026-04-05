@@ -87,6 +87,10 @@ async function queryWithSupabase(
     "";
 
   // Query orders: match by ownerId OR createdByEmail OR customerName, within date range, with valid statuses
+  // Sanitize values for use in PostgREST filter strings to prevent filter injection
+  const safeUserId = userId.replace(/[^a-zA-Z0-9-]/g, "");
+  const safeEmail = filters.email.replace(/[,()]/g, "");
+
   let q = supabase
     .from("orders")
     .select("*")
@@ -96,11 +100,12 @@ async function queryWithSupabase(
 
   // Match orders belonging to this user: by ownerId or by createdByEmail
   if (userDisplayName) {
+    const safeName = userDisplayName.replace(/[,()]/g, "");
     q = q.or(
-      `ownerId.eq.${userId},createdByEmail.eq.${filters.email},customerName.ilike.%${userDisplayName}%`,
+      `ownerId.eq.${safeUserId},createdByEmail.eq.${safeEmail},customerName.ilike.%${safeName}%`,
     );
   } else {
-    q = q.or(`ownerId.eq.${userId},createdByEmail.eq.${filters.email}`);
+    q = q.or(`ownerId.eq.${safeUserId},createdByEmail.eq.${safeEmail}`);
   }
 
   const { data: results } = await q
