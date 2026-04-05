@@ -115,10 +115,11 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
         }
       }
 
-      await zaloClient.sendText(
+      const sent = await zaloClient.sendText(
         chatId,
         "Chào bạn! Tôi là trợ lý Zenith. Vui lòng nhập Email để kết nối.",
       );
+      log(`Sent Welcome Response: ${JSON.stringify(sent)}`);
       return;
     }
 
@@ -212,8 +213,8 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
       ],
     });
 
-    await zaloClient.sendText(chatId, result.text);
-    log(`Successfully replied to Zalo: ${chatId}`);
+    const sent = await zaloClient.sendText(chatId, result.text);
+    log(`AI Reply sent to Zalo: ${chatId}. Result: ${JSON.stringify(sent)}`);
   } catch (error: any) {
     log(`FATAL ERROR in processZaloEvent: ${error.message}\n${error.stack}`);
   }

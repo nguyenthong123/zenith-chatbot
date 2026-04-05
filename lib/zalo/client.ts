@@ -6,15 +6,20 @@ export class ZaloClient {
   }
 
   private get apiUrl() {
-    return `https://bot-api.zaloplatforms.com/bot${this.accessToken}`;
+    // Zalo OA OpenAPI v2.0 endpoint for messages
+    return "https://openapi.zalo.me/v2.0/oa/message";
   }
 
-  async sendText(chatId: string, text: string) {
+  async sendText(userId: string, text: string) {
     const payload = {
-      chat_id: chatId,
-      text: text,
+      recipient: {
+        user_id: userId,
+      },
+      message: {
+        text: text,
+      },
     };
-    return this.post(`${this.apiUrl}/sendMessage`, payload);
+    return this.post(this.apiUrl, payload);
   }
 
   private async post(url: string, data: any) {
@@ -22,13 +27,19 @@ export class ZaloClient {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        access_token: this.accessToken,
       },
       body: JSON.stringify(data),
     });
 
     const result = await response.json();
-    if (!result.ok) {
-      console.error("Zalo API Error:", result);
+    if (result.error !== 0) {
+      console.error(
+        "[ZaloClient] Zalo API Error Response:",
+        JSON.stringify(result, null, 2),
+      );
+    } else {
+      console.log("[ZaloClient] Successfully sent message to Zalo");
     }
     return result;
   }
