@@ -83,6 +83,12 @@ export const register = async (
       });
 
     if (supabaseError) {
+      console.error("[register] Supabase Auth signUp error:", {
+        code: supabaseError.code,
+        message: supabaseError.message,
+        status: supabaseError.status,
+      });
+
       // Supabase returns error for duplicate emails
       if (
         supabaseError.code === "user_already_exists" ||
@@ -101,13 +107,46 @@ export const register = async (
       supabaseData?.user?.identities &&
       supabaseData.user.identities.length === 0
     ) {
+      console.warn(
+        "[register] User already exists (empty identities):",
+        validatedData.email,
+      );
       return { status: "user_exists" };
     }
 
+    // Handle case where user exists in Auth but hasn't confirmed email:
+    // supabaseData.user will exist with a valid id — treat as success and proceed
+    if (supabaseData?.user) {
+      console.log(
+        "[register] Supabase Auth signUp succeeded for:",
+        validatedData.email,
+        "| user id:",
+        supabaseData.user.id,
+      );
+    }
+
     // Also create user in the local database for app data
-    const [existingUser] = await getUser(validatedData.email);
-    if (!existingUser) {
-      await createUser(validatedData.email, validatedData.password);
+    // Wrap in try-catch so a DB failure doesn't block the sign-in flow
+    try {
+      const [existingUser] = await getUser(validatedData.email);
+      if (!existingUser) {
+        await createUser(validatedData.email, validatedData.password);
+        console.log(
+          "[register] Local DB user created for:",
+          validatedData.email,
+        );
+      } else {
+        console.log(
+          "[register] Local DB user already exists for:",
+          validatedData.email,
+        );
+      }
+    } catch (dbError) {
+      console.error(
+        "[register] Failed to create local DB user (non-blocking):",
+        dbError,
+      );
+      // Do not return failed — Auth succeeded, so we proceed to sign in
     }
 
     // Sign in with NextAuth to maintain app session
@@ -117,12 +156,17 @@ export const register = async (
       redirect: false,
     });
 
+    console.log(
+      "[register] Registration and sign-in completed for:",
+      validatedData.email,
+    );
     return { status: "success" };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { status: "invalid_data" };
     }
 
+    console.error("[register] Unexpected error during registration:", error);
     return { status: "failed" };
   }
 };
