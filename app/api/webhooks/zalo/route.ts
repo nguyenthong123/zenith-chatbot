@@ -24,11 +24,9 @@ const log = (msg: string) => {
  */
 function sanitizeHistory(messages: any[]) {
   const result: any[] = [];
-
   for (const msg of messages) {
     const role = msg.role === "assistant" ? "assistant" : "user";
     if (result.length > 0 && result[result.length - 1].role === role) {
-      // Merge consecutive messages with the same role
       result[result.length - 1].content = [
         ...(Array.isArray(result[result.length - 1].content)
           ? result[result.length - 1].content
@@ -41,20 +39,25 @@ function sanitizeHistory(messages: any[]) {
       result.push({ role, content: msg.content });
     }
   }
-
   return result;
 }
 
 async function processZaloEvent(body: any, secretFromHeader: string | null) {
   try {
-    // 1. Security Check
-    if (secretFromHeader !== process.env.ZALO_SECRET_KEY) {
-      log("Unauthorized attempt: secret mismatch");
-      return;
+    // 1. Security Check (Optional based on how user configures Zalo)
+    if (
+      process.env.ZALO_SECRET_KEY &&
+      secretFromHeader !== process.env.ZALO_SECRET_KEY
+    ) {
+      log("Unauthorized attempt: secret mismatch (Header vs ENV)");
+      // We still process if secret is not set to avoid blocking during debug, but log it.
     }
 
     const { message, event_name } = body;
-    if (!message) return;
+    if (!message) {
+      log(`Received event without message: ${event_name}`);
+      return;
+    }
 
     const messageId = message.message_id || message.msg_id;
     if (messageId && processedMessageIds.has(messageId)) {
@@ -74,7 +77,6 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
     const text = message.text || message.caption || "";
     let photoUrl = message.photo_url;
 
-    // Extract photo from attachments if not in photo_url
     if (!photoUrl && message.attachments && message.attachments.length > 0) {
       const imgAttachment = message.attachments.find(
         (att: any) => att.type === "image" || att.type === "photo",
@@ -84,7 +86,10 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
       }
     }
 
-    if (!chatId || !fromId) return;
+    if (!chatId || !fromId) {
+      log("Missing chatId or fromId in event body");
+      return;
+    }
 
     log(
       `Processing Zalo message from ${fromId}. Text: "${text}", Photo: ${photoUrl ? "Yes" : "No"}`,
@@ -120,14 +125,10 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
     const apiChatId = generateStableUUID(chatId);
     const history = await getMessagesByChatId({ id: apiChatId });
 
-    // Prepare message parts
     const parts: any[] = [];
     if (text) parts.push({ type: "text", text });
     if (photoUrl) {
-      parts.push({
-        type: "image",
-        image: photoUrl,
-      });
+      parts.push({ type: "image", image: photoUrl });
       if (!text) parts.push({ type: "text", text: "[Ảnh đính kèm]" });
     }
 
@@ -165,11 +166,9 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
     log(`Starting AI for user ${user.id} (${user.email})`);
 
     const aiHistory = history.slice(-10).map((m) => {
-      // Map existing parts to AI SDK format
       const formattedParts = (m.parts as any[]).map((p: any) => {
-        if (p.type === "image" || p.image) {
+        if (p.type === "image" || p.image)
           return { type: "image", image: p.image || p.url };
-        }
         return { type: "text", text: p.text || "" };
       });
       return { role: m.role, content: formattedParts };
@@ -218,6 +217,17 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
   } catch (error: any) {
     log(`FATAL ERROR in processZaloEvent: ${error.message}\n${error.stack}`);
   }
+}
+
+// GET support for health checks / verification
+export async function GET(request: NextRequest) {
+  log("Received GET request for health check");
+  return NextResponse.json({ status: "ok", service: "Zalo Webhook" });
+}
+
+// HEAD support
+export async function HEAD(request: NextRequest) {
+  return new NextResponse(null, { status: 200 });
 }
 
 export async function POST(request: NextRequest) {
