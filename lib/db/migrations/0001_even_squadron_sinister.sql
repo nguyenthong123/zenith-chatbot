@@ -1,4 +1,4 @@
-CREATE TABLE "cash_book" (
+CREATE TABLE IF NOT EXISTS "cash_book" (
 	"id" text PRIMARY KEY NOT NULL,
 	"amount" bigint,
 	"type" varchar(50),
@@ -13,7 +13,7 @@ CREATE TABLE "cash_book" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "Chat" (
+CREATE TABLE IF NOT EXISTS "Chat" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"createdAt" timestamp NOT NULL,
 	"title" text NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE "Chat" (
 	"visibility" varchar DEFAULT 'private' NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "customers" (
+CREATE TABLE IF NOT EXISTS "customers" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text,
 	"businessName" text,
@@ -38,7 +38,7 @@ CREATE TABLE "customers" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "Document" (
+CREATE TABLE IF NOT EXISTS "Document" (
 	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"createdAt" timestamp NOT NULL,
 	"title" text NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE "Document" (
 	CONSTRAINT "Document_id_createdAt_pk" PRIMARY KEY("id","createdAt")
 );
 --> statement-breakpoint
-CREATE TABLE "knowledge_base" (
+CREATE TABLE IF NOT EXISTS "knowledge_base" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"content" text NOT NULL,
 	"metadata" json,
@@ -56,7 +56,7 @@ CREATE TABLE "knowledge_base" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "Message_v2" (
+CREATE TABLE IF NOT EXISTS "Message_v2" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"chatId" uuid NOT NULL,
 	"role" varchar NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE "Message_v2" (
 	"createdAt" timestamp NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "orders" (
+CREATE TABLE IF NOT EXISTS "orders" (
 	"id" text PRIMARY KEY NOT NULL,
 	"orderId" varchar(100),
 	"customerId" text,
@@ -80,7 +80,7 @@ CREATE TABLE "orders" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "payments" (
+CREATE TABLE IF NOT EXISTS "payments" (
 	"id" text PRIMARY KEY NOT NULL,
 	"amount" bigint,
 	"customerId" text,
@@ -94,7 +94,7 @@ CREATE TABLE "payments" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "price_lists" (
+CREATE TABLE IF NOT EXISTS "price_lists" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"title" text NOT NULL,
 	"headers" json,
@@ -105,7 +105,7 @@ CREATE TABLE "price_lists" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "products" (
+CREATE TABLE IF NOT EXISTS "products" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"sku" varchar(255),
@@ -125,14 +125,14 @@ CREATE TABLE "products" (
 	"updatedAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "Stream" (
+CREATE TABLE IF NOT EXISTS "Stream" (
 	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"chatId" uuid NOT NULL,
 	"createdAt" timestamp NOT NULL,
 	CONSTRAINT "Stream_id_pk" PRIMARY KEY("id")
 );
 --> statement-breakpoint
-CREATE TABLE "Suggestion" (
+CREATE TABLE IF NOT EXISTS "Suggestion" (
 	"id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"documentId" uuid NOT NULL,
 	"documentCreatedAt" timestamp NOT NULL,
@@ -145,7 +145,7 @@ CREATE TABLE "Suggestion" (
 	CONSTRAINT "Suggestion_id_pk" PRIMARY KEY("id")
 );
 --> statement-breakpoint
-CREATE TABLE "system_config" (
+CREATE TABLE IF NOT EXISTS "system_config" (
 	"id" text PRIMARY KEY NOT NULL,
 	"accountName" text,
 	"accountNumber" text,
@@ -155,7 +155,7 @@ CREATE TABLE "system_config" (
 	"updatedBy" text
 );
 --> statement-breakpoint
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" varchar(64) NOT NULL,
 	"password" varchar(64),
@@ -172,14 +172,14 @@ CREATE TABLE "users" (
 	"zaloId" varchar(255)
 );
 --> statement-breakpoint
-CREATE TABLE "user_memories" (
+CREATE TABLE IF NOT EXISTS "user_memories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"userId" uuid NOT NULL,
 	"content" text NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "Vote_v2" (
+CREATE TABLE IF NOT EXISTS "Vote_v2" (
 	"chatId" uuid NOT NULL,
 	"messageId" uuid NOT NULL,
 	"isUpvoted" boolean NOT NULL,
@@ -202,14 +202,14 @@ ALTER TABLE "Suggestion" ADD CONSTRAINT "Suggestion_documentId_documentCreatedAt
 ALTER TABLE "user_memories" ADD CONSTRAINT "user_memories_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "Vote_v2" ADD CONSTRAINT "Vote_v2_chatId_Chat_id_fk" FOREIGN KEY ("chatId") REFERENCES "public"."Chat"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "Vote_v2" ADD CONSTRAINT "Vote_v2_messageId_Message_v2_id_fk" FOREIGN KEY ("messageId") REFERENCES "public"."Message_v2"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "cash_date_idx" ON "cash_book" USING btree ("date");--> statement-breakpoint
-CREATE UNIQUE INDEX "cash_owner_idx" ON "cash_book" USING btree ("ownerId");--> statement-breakpoint
-CREATE UNIQUE INDEX "customer_owner_idx" ON "customers" USING btree ("ownerId","id");--> statement-breakpoint
-CREATE UNIQUE INDEX "customer_name_idx" ON "customers" USING btree ("name");--> statement-breakpoint
-CREATE UNIQUE INDEX "order_date_idx" ON "orders" USING btree ("date");--> statement-breakpoint
-CREATE UNIQUE INDEX "order_owner_idx" ON "orders" USING btree ("ownerId");--> statement-breakpoint
-CREATE UNIQUE INDEX "payment_date_idx" ON "payments" USING btree ("date");--> statement-breakpoint
-CREATE UNIQUE INDEX "payment_owner_idx" ON "payments" USING btree ("ownerId");--> statement-breakpoint
-CREATE UNIQUE INDEX "email_idx" ON "users" USING btree ("email");--> statement-breakpoint
-CREATE UNIQUE INDEX "firestore_id_idx" ON "users" USING btree ("firestoreId");--> statement-breakpoint
-CREATE UNIQUE INDEX "zalo_id_idx" ON "users" USING btree ("zaloId");
+CREATE UNIQUE INDEX IF NOT EXISTS "cash_date_idx" ON "cash_book" USING btree ("date");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "cash_owner_idx" ON "cash_book" USING btree ("ownerId");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "customer_owner_idx" ON "customers" USING btree ("ownerId","id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "customer_name_idx" ON "customers" USING btree ("name");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "order_date_idx" ON "orders" USING btree ("date");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "order_owner_idx" ON "orders" USING btree ("ownerId");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "payment_date_idx" ON "payments" USING btree ("date");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "payment_owner_idx" ON "payments" USING btree ("ownerId");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "email_idx" ON "users" USING btree ("email");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "firestore_id_idx" ON "users" USING btree ("firestoreId");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "zalo_id_idx" ON "users" USING btree ("zaloId");

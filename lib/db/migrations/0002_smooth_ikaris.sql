@@ -1,4 +1,4 @@
-CREATE TABLE "guest_users" (
+CREATE TABLE IF NOT EXISTS "guest_users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" varchar(255),
 	"name" text,
