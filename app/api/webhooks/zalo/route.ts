@@ -256,8 +256,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const secretFromHeader = request.headers.get("x-bot-api-secret-token");
 
-    // Debug Log (Vercel console)
-    console.log(`[ZaloWebhookIncoming] Body: ${JSON.stringify(body, null, 2)}`);
+    // Validate Secret Token if configured
+    const expectedSecret = process.env.ZALO_WEBHOOK_SECRET;
+    if (expectedSecret && secretFromHeader !== expectedSecret) {
+      log(
+        `[Security] Invalid Secret Token provided in header: ${secretFromHeader}`,
+      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // We await to keep the Lambda alive until the processing is truly finished
     await processZaloEvent(body, secretFromHeader);
