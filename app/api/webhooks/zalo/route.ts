@@ -43,40 +43,44 @@ function sanitizeHistory(messages: any[]) {
 }
 
 async function processZaloEvent(body: any, secretFromHeader: string | null) {
+  const { message, event_name } = body;
+  log(`[Event] Received event_name: ${event_name}`);
+
+  if (!message) {
+    log(`Received event without message contents: ${event_name}`);
+    return;
+  }
+
   try {
-    // 1. Security Check (Optional based on how user configures Zalo)
-    if (
-      process.env.ZALO_SECRET_KEY &&
-      secretFromHeader !== process.env.ZALO_SECRET_KEY
-    ) {
-      log("Unauthorized attempt: secret mismatch (Header vs ENV)");
-      // We still process if secret is not set to avoid blocking during debug, but log it.
-    }
+    // 1. ID Extraction (Zalo OA stores ID in sender.id or from.id)
+    const fromId = body.sender?.id || message.from?.id;
+    const chatId = fromId; // For Zalo OA, the recipient ID for responses is the sender's ID
+    const text = (message.text || "").trim();
 
-    const { message, event_name } = body;
-    if (!message) {
-      log(`Received event without message: ${event_name}`);
+    log(`[IDs] extracted fromId: ${fromId}, text: ${text}`);
+
+    if (!fromId) {
+      log("Error: Could not extract sender ID from Zalo event body");
       return;
     }
 
+    // 2. Deduplication
     const messageId = message.message_id || message.msg_id;
-    if (messageId && processedMessageIds.has(messageId)) {
-      log(`Duplicate message detected, skipping: ${messageId}`);
-      return;
-    }
     if (messageId) {
+      if (processedMessageIds.has(messageId)) {
+        log(`Duplicate message detected, skipping: ${messageId}`);
+        return;
+      }
       processedMessageIds.add(messageId);
+      // Basic house keeping for memory
       if (processedMessageIds.size > 1000) {
         const firstId = processedMessageIds.values().next().value;
         if (firstId) processedMessageIds.delete(firstId);
       }
     }
 
-    const chatId = message.chat?.id;
-    const fromId = message.from?.id;
-    const text = message.text || message.caption || "";
+    // 3. Media (Image) Processing
     let photoUrl = message.photo_url;
-
     if (!photoUrl && message.attachments && message.attachments.length > 0) {
       const imgAttachment = message.attachments.find(
         (att: any) => att.type === "image" || att.type === "photo",
@@ -86,43 +90,60 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
       }
     }
 
-    if (!chatId || !fromId) {
-      log("Missing chatId or fromId in event body");
-      return;
-    }
-
-    log(
-      `Processing Zalo message from ${fromId}. Text: "${text}", Photo: ${photoUrl ? "Yes" : "No"}`,
-    );
-
+    // 4. Authenticate User (by Zalo ID)
     const users = await getUserByZaloId(fromId);
     const user = users[0];
 
+    // 5. Handle Linking Flow
     if (!user) {
-      log(`User not found for Zalo ID: ${fromId}`);
+      log(`[Auth] User not found for Zalo ID: ${fromId}`);
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const trimmedText = text.trim().toLowerCase();
+      const trimmedText = text.toLowerCase();
+
+      log(`[Link] Checking if message '${trimmedText}' is an email...`);
 
       if (emailRegex.test(trimmedText)) {
+        log(`[Link] Email detected: ${trimmedText}. Searching database...`);
         const existingUsers = await getUserByEmail(trimmedText);
+        log(
+          `[Link] Found ${existingUsers.length} users with email ${trimmedText}`,
+        );
+
         if (existingUsers.length > 0) {
-          await updateUserZaloId(existingUsers[0].id, fromId);
+          const targetUser = existingUsers[0];
+          log(
+            `[Link] Linking Zalo ID ${fromId} to user ${targetUser.id} (${targetUser.email})`,
+          );
+          await updateUserZaloId(targetUser.id, fromId);
+
           await zaloClient.sendText(
             chatId,
-            "✅ Đã kết nối tài khoản thành công!",
+            "✅ Đã kết nối tài khoản thành công! Bây giờ bạn có thể chat với trợ lý Zenith.",
           );
           return;
         }
+
+        log(
+          `[Link] Email '${trimmedText}' is not registered in our 'users' table.`,
+        );
+        await zaloClient.sendText(
+          chatId,
+          `❌ Không tìm thấy tài khoản với email: ${trimmedText}. Vui lòng đăng ký tài khoản trên website trước khi kết nối.`,
+        );
+        return;
       }
 
-      const sent = await zaloClient.sendText(
+      log(`[Link] Prompting user for email registration.`);
+      await zaloClient.sendText(
         chatId,
-        "Chào bạn! Tôi là trợ lý Zenith. Vui lòng nhập Email để kết nối.",
+        "Chào bạn! Tôi là trợ lý Zenith. Vui lòng nhập Email đã đăng ký trên hệ thống để kết nối và bắt đầu trò chuyện.",
       );
-      log(`Sent Welcome Response: ${JSON.stringify(sent)}`);
       return;
     }
 
+    log(`[Auth] Authenticated user: ${user.email} (ID: ${user.id})`);
+
+    // 6. AI Conversation Processing
     const apiChatId = generateStableUUID(chatId);
     const history = await getMessagesByChatId({ id: apiChatId });
 
@@ -150,6 +171,7 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
         : [],
     };
 
+    // Save Chat & Message
     const existingChat = await getChatById({ id: apiChatId });
     if (!existingChat) {
       await saveChat({
@@ -164,7 +186,7 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
       messages: [{ ...userMessage, chatId: apiChatId, createdAt: new Date() }],
     });
 
-    log(`Starting AI for user ${user.id} (${user.email})`);
+    log(`[AI] Processing AI response for ${user.email}...`);
 
     const aiHistory = history.slice(-10).map((m) => {
       const formattedParts = (m.parts as any[]).map((p: any) => {
@@ -187,7 +209,7 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
       userName: user.displayName || user.name,
       userEmail: user.email,
       messages: aiMessages,
-      onToolCall: async (toolNames) => {
+      onToolCall: async () => {
         if (!hasSentIndicator) {
           await zaloClient.sendText(
             chatId,
@@ -198,7 +220,7 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
       },
     });
 
-    log(`AI Result: ${result.text.substring(0, 50)}...`);
+    log(`[AI] Response generated. Saving to DB...`);
 
     await saveMessages({
       messages: [
@@ -213,20 +235,18 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
       ],
     });
 
+    log(`[Zalo] Sending AI reply to user...`);
     const sent = await zaloClient.sendText(chatId, result.text);
-    log(`AI Reply sent to Zalo: ${chatId}. Result: ${JSON.stringify(sent)}`);
+    log(`[Zalo] Result: ${JSON.stringify(sent)}`);
   } catch (error: any) {
     log(`FATAL ERROR in processZaloEvent: ${error.message}\n${error.stack}`);
   }
 }
 
-// GET support for health checks / verification
 export async function GET(request: NextRequest) {
-  log("Received GET request for health check");
   return NextResponse.json({ status: "ok", service: "Zalo Webhook" });
 }
 
-// HEAD support
 export async function HEAD(request: NextRequest) {
   return new NextResponse(null, { status: 200 });
 }
@@ -234,13 +254,12 @@ export async function HEAD(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const headers = Object.fromEntries(request.headers.entries());
     const secretFromHeader = request.headers.get("x-bot-api-secret-token");
 
-    const logData = `\n--- ${new Date().toISOString()} ---\nHeaders: ${JSON.stringify(headers, null, 2)}\nBody: ${JSON.stringify(body, null, 2)}\n`;
-    console.log(`[ZaloWebhookDebug] ${logData}`);
+    // Debug Log (Vercel console)
+    console.log(`[ZaloWebhookIncoming] Body: ${JSON.stringify(body, null, 2)}`);
 
-    // Await processing to prevent Vercel from terminating the function early
+    // We await to keep the Lambda alive until the processing is truly finished
     await processZaloEvent(body, secretFromHeader);
 
     return NextResponse.json({ ok: true });
