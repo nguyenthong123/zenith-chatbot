@@ -300,14 +300,14 @@ DO $$ BEGIN
         ALTER TABLE "Vote_v2" ADD CONSTRAINT "Vote_v2_messageId_Message_v2_id_fk" FOREIGN KEY ("messageId") REFERENCES "public"."Message_v2"("id") ON DELETE no action ON UPDATE no action;
     END IF;
 END $$;--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "cash_date_idx" ON "cash_book" USING btree ("date");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "cash_owner_idx" ON "cash_book" USING btree ("ownerId");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "cash_date_idx" ON "cash_book" USING btree ("date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "cash_owner_idx" ON "cash_book" USING btree ("ownerId");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "customer_owner_idx" ON "customers" USING btree ("ownerId","id");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "customer_name_idx" ON "customers" USING btree ("name");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "order_date_idx" ON "orders" USING btree ("date");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "order_owner_idx" ON "orders" USING btree ("ownerId");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "payment_date_idx" ON "payments" USING btree ("date");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "payment_owner_idx" ON "payments" USING btree ("ownerId");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "order_date_idx" ON "orders" USING btree ("date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "order_owner_idx" ON "orders" USING btree ("ownerId");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "payment_date_idx" ON "payments" USING btree ("date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "payment_owner_idx" ON "payments" USING btree ("ownerId");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "email_idx" ON "users" USING btree ("email");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "firestore_id_idx" ON "users" USING btree ("firestoreId");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "zalo_id_idx" ON "users" USING btree ("zaloId");
