@@ -24,7 +24,7 @@ export async function proxy(request: NextRequest) {
     secret: process.env.AUTH_SECRET,
     // Forcing secureCookie to false ensure it reads 'authjs.session-token'
     // which localtunnel/dev server uses even on HTTPS.
-    secureCookie: false,
+    secureCookie: !isDevelopmentEnvironment,
   });
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";

@@ -32,6 +32,7 @@ import {
   user,
   userMemory,
   vote,
+  zaloConfig,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
@@ -718,5 +719,48 @@ export async function searchKnowledgeBase(query?: string) {
       .limit(10);
   } catch (_error) {
     return [];
+  }
+}
+
+export async function getZaloConfig() {
+  try {
+    const configs = await db.select().from(zaloConfig).limit(1);
+    return configs[0] || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function setZaloConfig({
+  accessToken,
+  refreshToken,
+  expiresAt,
+}: {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: Date;
+}) {
+  try {
+    return await db
+      .insert(zaloConfig)
+      .values({
+        id: "default",
+        accessToken,
+        refreshToken,
+        expiresAt,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: zaloConfig.id,
+        set: {
+          accessToken,
+          refreshToken,
+          expiresAt,
+          updatedAt: new Date(),
+        },
+      });
+  } catch (error) {
+    console.error("Database error in setZaloConfig:", error);
+    throw new ChatbotError("bad_request:database", "Failed to set zalo config");
   }
 }

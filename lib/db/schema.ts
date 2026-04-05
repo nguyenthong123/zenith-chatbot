@@ -241,6 +241,16 @@ export const systemConfig = pgTable("system_config", {
 
 export type SystemConfig = typeof systemConfig.$inferSelect;
 
+export const zaloConfig = pgTable("zalo_config", {
+  id: text("id").primaryKey().notNull(),
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type ZaloConfig = typeof zaloConfig.$inferSelect;
+
 export const customer = pgTable(
   "customers",
   {
