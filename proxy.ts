@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/app/(auth)/auth";
 import { guestRegex } from "./lib/constants";
 
 export async function proxy(request: NextRequest) {
@@ -19,13 +19,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    // Forcing secureCookie to false ensure it reads 'authjs.session-token'
-    // which localtunnel/dev server uses even on HTTPS.
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const session = await auth();
+  const token = session?.user;
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
