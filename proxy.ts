@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/app/(auth)/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "./app/(auth)/auth.config";
 import { guestRegex } from "./lib/constants";
+
+const { auth } = NextAuth(authConfig);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
