@@ -140,6 +140,20 @@ const PurePreviewMessage = ({
       const widthClass = "w-[min(100%,450px)]";
 
       if (state === "output-available") {
+        if (part.output && "error" in part.output) {
+          return (
+            <div className={widthClass} key={toolCallId}>
+              <Tool className="w-full" defaultOpen={true}>
+                <ToolHeader state="output-available" type="tool-getWeather" />
+                <ToolContent>
+                  <div className="px-4 py-3 text-muted-foreground text-sm">
+                    {String(part.output.error)}
+                  </div>
+                </ToolContent>
+              </Tool>
+            </div>
+          );
+        }
         return (
           <div className={widthClass} key={toolCallId}>
             <Weather weatherAtLocation={part.output} />
