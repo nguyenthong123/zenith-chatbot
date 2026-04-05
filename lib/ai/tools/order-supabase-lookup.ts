@@ -51,16 +51,28 @@ export const getOrderSupabaseLookup = (
           // Non-admin: filter by ownerEmail (session email) for data isolation
           if (userEmail) {
             query = query.eq("ownerEmail", userEmail);
-          } else {
+          } else if (userId) {
             query = query.eq("ownerId", userId);
+          } else {
+            return {
+              error: "Không thể xác định người dùng. Vui lòng đăng nhập lại.",
+              ordersCount: 0,
+              totalRevenue: 0,
+            };
           }
         } else if (employeeEmail) {
           // Admin can filter by specific employee
-          query = query.eq("createdByEmail", employeeEmail);
+          query = query.eq(
+            "createdByEmail",
+            employeeEmail.replace(/[%_]/g, ""),
+          );
         }
 
         if (customerName) {
-          query = query.ilike("customerName", `%${customerName}%`);
+          query = query.ilike(
+            "customerName",
+            `%${customerName.replace(/[%_]/g, "")}%`,
+          );
         }
         if (startDate) {
           query = query.gte("date", startDate);

@@ -33,23 +33,24 @@ export const getUserLookup = (
           );
 
         if (userRole !== "admin") {
-          // Non-admin users can only see their own data
-          const filterEmail = userEmail || email;
-          if (!filterEmail) {
+          // Non-admin users can ONLY see their own data using session email
+          if (!userEmail) {
             return {
               error:
                 "Không thể xác định email người dùng. Vui lòng đăng nhập lại.",
             };
           }
-          query = query.eq("email", filterEmail);
+          // Always use session email for non-admin, ignore any provided email/name
+          query = query.eq("email", userEmail);
         } else {
           // Admin can search by email or name
           if (email) {
-            query = query.ilike("email", `%${email}%`);
+            query = query.ilike("email", `%${email.replace(/[%_]/g, "")}%`);
           }
           if (name) {
+            const sanitizedName = name.replace(/[%_]/g, "");
             query = query.or(
-              `name.ilike.%${name}%,displayName.ilike.%${name}%`,
+              `name.ilike.%${sanitizedName}%,displayName.ilike.%${sanitizedName}%`,
             );
           }
         }
