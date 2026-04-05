@@ -240,10 +240,8 @@ export async function POST(request: NextRequest) {
     const logData = `\n--- ${new Date().toISOString()} ---\nHeaders: ${JSON.stringify(headers, null, 2)}\nBody: ${JSON.stringify(body, null, 2)}\n`;
     console.log(`[ZaloWebhookDebug] ${logData}`);
 
-    // Fast acknowledgement to Zalo
-    processZaloEvent(body, secretFromHeader).catch((err) => {
-      log(`Background processing error: ${err.message}`);
-    });
+    // Await processing to prevent Vercel from terminating the function early
+    await processZaloEvent(body, secretFromHeader);
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
