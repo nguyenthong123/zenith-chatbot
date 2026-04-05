@@ -4,10 +4,14 @@ import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import { type Customer, customer } from "@/lib/db/schema";
 
-export const getCustomerLookup = (userId: string, userRole: string) =>
+export const getCustomerLookup = (
+  userId: string,
+  userRole: string,
+  userEmail?: string,
+) =>
   tool({
     description:
-      "Search for customer information including contact details and address. Use this to identify customers by name or phone number.",
+      "Search for customer information including contact details and address in the Supabase database. Use this to identify customers by name or phone number.",
     inputSchema: z.object({
       query: z
         .string()
@@ -23,10 +27,13 @@ export const getCustomerLookup = (userId: string, userRole: string) =>
           ),
         ];
 
-        // Role-based data isolation
-        if (userRole !== "admin") {
-          conditions.push(eq(customer.ownerId, userId));
-        }
+        // Mandatory account isolation by email/ID
+        conditions.push(
+          or(
+            eq(customer.ownerId, userId),
+            eq(customer.ownerEmail, userEmail ?? ""),
+          ),
+        );
 
         const customers = await db
           .select()
@@ -42,20 +49,7 @@ export const getCustomerLookup = (userId: string, userRole: string) =>
 
         return {
           customers: customers.map((c: Customer) => ({
-            id: c.id,
-            name: c.name,
-            phone: c.phone,
-            address: c.address,
-            businessName: c.businessName,
-            type: c.type,
-            status: c.status,
-            ownerEmail: c.ownerEmail,
-            createdBy: c.createdBy,
-            createdByEmail: c.createdByEmail,
-            updatedBy: c.updatedBy,
-            updatedByEmail: c.updatedByEmail,
-            createdAt: c.createdAt,
-            updatedAt: c.updatedAt,
+            ...c,
           })),
         };
       } catch (error) {

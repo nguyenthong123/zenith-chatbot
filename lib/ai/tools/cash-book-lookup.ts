@@ -1,13 +1,17 @@
 import { tool } from "ai";
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import { type CashBook, cashBook } from "@/lib/db/schema";
 
-export const getCashBookLookup = (userId: string, userRole: string) =>
+export const getCashBookLookup = (
+  userId: string,
+  userRole: string,
+  userEmail?: string,
+) =>
   tool({
     description:
-      "Check for cash book entries including income (thu) and expenses (chi). Use this to answer questions about 'today's cash flow' or 'current balance'. Provide date range (YYYY-MM-DD) for accuracy.",
+      "Check for cash book entries including income (thu) and expenses (chi) in the Supabase database. Use this to answer questions about 'today's cash flow' or 'current balance'. Provide date range (YYYY-MM-DD) for accuracy.",
     inputSchema: z.object({
       type: z
         .enum(["thu", "chi"])
@@ -33,10 +37,13 @@ export const getCashBookLookup = (userId: string, userRole: string) =>
           conditions.push(lte(cashBook.date, endDate));
         }
 
-        // Role-based data isolation
-        if (userRole !== "admin") {
-          conditions.push(eq(cashBook.ownerId, userId));
-        }
+        // Mandatory account isolation by email/ID
+        conditions.push(
+          or(
+            eq(cashBook.ownerId, userId),
+            eq(cashBook.ownerEmail, userEmail ?? ""),
+          ),
+        );
 
         const entries = await db
           .select()

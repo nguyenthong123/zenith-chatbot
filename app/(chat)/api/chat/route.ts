@@ -22,17 +22,23 @@ import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { getBillingLookup } from "@/lib/ai/tools/billing-lookup";
 import { getCashBookLookup } from "@/lib/ai/tools/cash-book-lookup";
+import { getChatHistorySearch } from "@/lib/ai/tools/chat-history";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getCustomerLookup } from "@/lib/ai/tools/customer-lookup";
+import { getDatabaseDiagnostics } from "@/lib/ai/tools/diagnostic";
+import { getDocumentSearch } from "@/lib/ai/tools/document-search";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
+import { knowledgeBaseLookup } from "@/lib/ai/tools/knowledge-base-lookup";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
 import { getOrderSupabaseLookup } from "@/lib/ai/tools/order-supabase-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { saveKnowledge } from "@/lib/ai/tools/save-knowledge";
 import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
+import { getSystemInfo } from "@/lib/ai/tools/system-info";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { getUserLookup } from "@/lib/ai/tools/user-lookup";
 import { webSearch } from "@/lib/ai/tools/web-search";
@@ -52,7 +58,7 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
-import { convertToUIMessages, generateUUID } from "@/lib/utils";
+import { convertToUIMessages, generateUUID, isValidUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
@@ -82,6 +88,13 @@ export async function POST(request: Request) {
 
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       parsedBody;
+
+    if (!isValidUUID(id)) {
+      return new ChatbotError(
+        "bad_request:api",
+        "Invalid chat ID",
+      ).toResponse();
+    }
 
     const [, session] = await Promise.all([
       checkBotId().catch(() => null),
@@ -119,6 +132,13 @@ export async function POST(request: Request) {
       }
 
       if (message?.role === "user") {
+        if (!isValidUUID(id)) {
+          return new ChatbotError(
+            "bad_request:api",
+            "Invalid chat ID for new chat",
+          ).toResponse();
+        }
+
         await saveChat({
           id,
           userId: session.user.id,
@@ -263,7 +283,13 @@ export async function POST(request: Request) {
                   "userLookup",
                   "billingLookup",
                   "cashBookLookup",
+                  "knowledgeBaseLookup",
+                  "saveKnowledge",
                   "syncFirestoreToSupabase",
+                  "searchChatHistory",
+                  "documentSearch",
+                  "getSystemInfo",
+                  "manageUserMemory",
                 ],
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
@@ -297,14 +323,17 @@ export async function POST(request: Request) {
             productLookup: getProductLookup(
               session.user.id,
               session.user.role || "user",
+              session.user.email ?? undefined,
             ),
             customerLookup: getCustomerLookup(
               session.user.id,
               session.user.role || "user",
+              session.user.email ?? undefined,
             ),
             orderLookup: getOrderLookup(
               session.user.id,
               session.user.role || "user",
+              session.user.email ?? undefined,
             ),
             orderSupabaseLookup: getOrderSupabaseLookup(
               session.user.id,
@@ -319,12 +348,21 @@ export async function POST(request: Request) {
             billingLookup: getBillingLookup(
               session.user.id,
               session.user.role || "user",
+              session.user.email ?? undefined,
             ),
             cashBookLookup: getCashBookLookup(
               session.user.id,
               session.user.role || "user",
+              session.user.email ?? undefined,
             ),
+            knowledgeBaseLookup,
+            saveKnowledge: saveKnowledge(session.user.id),
             syncFirestoreToSupabase,
+            searchChatHistory: getChatHistorySearch(session.user.id),
+            documentSearch: getDocumentSearch(session.user.id),
+            getSystemInfo: getSystemInfo(),
+            manageUserMemory: getManageUserMemory(session.user.id),
+            getDatabaseDiagnostics: getDatabaseDiagnostics(),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,

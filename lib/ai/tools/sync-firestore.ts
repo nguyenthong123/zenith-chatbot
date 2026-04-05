@@ -77,7 +77,7 @@ function toDateString(val: unknown): string | null {
 
 export const syncFirestoreToSupabase = tool({
   description:
-    "Sync all data from Firestore to the optimized Supabase database. This includes customers, orders, payments, products, cash book entries and system configurations. Use this when the user asks to 'migrate' or 'sync' data.",
+    "Sync all data from Firestore to the optimized Supabase database. This is a MIGRATION tool use only when explicitly asked to 'sync' or 'update' data from Firestore. For daily data operations, use the specific lookup tools (Supabase is the live database).",
   inputSchema: z.object({
     collections: z
       .array(z.string())

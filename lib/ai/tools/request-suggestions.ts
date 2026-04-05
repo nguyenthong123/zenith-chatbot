@@ -84,7 +84,7 @@ export const requestSuggestions = ({
             description: element.description,
             id: generateUUID(),
             documentId,
-            isResolved: false,
+            isCurrent: true,
           };
 
           dataStream.write({

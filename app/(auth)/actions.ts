@@ -1,8 +1,9 @@
 "use server";
 
+import { AuthError } from "next-auth";
 import { z } from "zod";
 
-import { createUser, getUser } from "@/lib/db/queries";
+import { createUser, getUser, updateUserPassword } from "@/lib/db/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { signIn } from "./auth";
@@ -50,7 +51,12 @@ export const login = async (
       return { status: "invalid_data" };
     }
 
-    return { status: "failed" };
+    if (error instanceof AuthError) {
+      return { status: "failed" };
+    }
+
+    // Re-throw redirect errors and other non-handled errors
+    throw error;
   }
 };
 
@@ -86,59 +92,46 @@ export const register = async (
       console.error("[register] Supabase Auth signUp error:", {
         code: supabaseError.code,
         message: supabaseError.message,
-        status: supabaseError.status,
       });
 
-      // Supabase returns error for duplicate emails
+      // If user already exists, we might still fail if we don't have a local record
       if (
         supabaseError.code === "user_already_exists" ||
         supabaseError.message?.includes("already registered")
       ) {
-        return { status: "user_exists" };
+        // Since we can't easily get the ID without admin key here,
+        // we'll try to just sign person in. If that fails, then return user_exists.
+        try {
+          await signIn("credentials", {
+            email: validatedData.email,
+            password: validatedData.password,
+            redirect: false,
+          });
+          return { status: "success" };
+        } catch (e) {
+          return { status: "user_exists" };
+        }
       }
       return { status: "failed" };
     }
 
-    // When "Confirm email" is disabled in Supabase project settings,
-    // signing up with an existing email does not return an error.
-    // Instead, Supabase returns a user object with an empty identities array.
-    // See: https://supabase.com/docs/reference/javascript/auth-signup
-    if (
+    // When "Confirm email" is disabled, Supabase might return user with empty identities if they exist
+    const isExistingUser =
       supabaseData?.user?.identities &&
-      supabaseData.user.identities.length === 0
-    ) {
-      console.warn(
-        "[register] User already exists (empty identities):",
-        validatedData.email,
-      );
-      return { status: "user_exists" };
-    }
+      supabaseData.user.identities.length === 0;
 
-    // Handle case where user exists in Auth but hasn't confirmed email:
-    // supabaseData.user will exist with a valid id — treat as success and proceed
     if (supabaseData?.user) {
       console.log(
-        "[register] Supabase Auth signUp succeeded | user id:",
+        `[register] Supabase Auth status: ${isExistingUser ? "Existing" : "New"} | user id:`,
         supabaseData.user.id,
       );
-    }
 
-    // Also create user in the local database for app data
-    // Wrap in try-catch so a DB failure doesn't block the sign-in flow
-    try {
-      const [existingUser] = await getUser(validatedData.email);
-      if (!existingUser) {
-        await createUser(validatedData.email, validatedData.password);
-        console.log("[register] Local DB user created successfully");
-      } else {
-        console.log("[register] Local DB user already exists");
-      }
-    } catch (dbError) {
-      console.error(
-        "[register] Failed to create local DB user (non-blocking):",
-        dbError instanceof Error ? dbError.message : "Unknown DB error",
+      // Ensure local DB is in sync
+      await ensureLocalUserSync(
+        validatedData.email,
+        validatedData.password,
+        supabaseData.user.id,
       );
-      // Do not return failed — Auth succeeded, so we proceed to sign in
     }
 
     // Sign in with NextAuth to maintain app session
@@ -155,10 +148,44 @@ export const register = async (
       return { status: "invalid_data" };
     }
 
-    console.error(
-      "[register] Unexpected error during registration:",
-      error instanceof Error ? error.message : "Unknown error",
-    );
-    return { status: "failed" };
+    if (error instanceof AuthError) {
+      console.error(
+        "[register] Auth error during registration:",
+        error.type,
+        error.message,
+      );
+      return { status: "failed" };
+    }
+
+    // Re-throw redirect errors and other non-handled errors
+    throw error;
   }
 };
+
+async function ensureLocalUserSync(
+  email: string,
+  password: string,
+  id: string,
+) {
+  try {
+    const [existingUser] = await getUser(email);
+    if (!existingUser) {
+      console.log(`[register] Syncing local user for ${email} with ID ${id}`);
+      await createUser(email, password, id);
+    } else {
+      console.log(`[register] Local DB user already exists for ${email}`);
+      // If user exists but has no password (e.g. from social login), update it
+      if (!existingUser.password) {
+        console.log(
+          `[register] Existing user ${email} from social login found. Updating with password.`,
+        );
+        await updateUserPassword(email, password);
+      }
+    }
+  } catch (dbError) {
+    console.error(
+      "[register] CRITICAL: Failed to sync local DB user:",
+      dbError instanceof Error ? dbError.message : String(dbError),
+    );
+  }
+}

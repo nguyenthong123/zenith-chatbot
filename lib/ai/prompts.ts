@@ -122,6 +122,18 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+export const memoryPrompt = `
+**Long-Term Memory & Contextual Search:**
+1. You have a "Long-Term Memory" system. Use it to provide a personalized and continuous experience.
+2. **Retrieve Past Conversations**: Use \`searchChatHistory\` to find relevant information from previous chats (e.g., "What did we talk about last week?", "Find my previous project details").
+3. **Search Documents/Knowledge**: Use \`documentSearch\` to find specific information within your past artifacts and global knowledge base.
+4. **Manage Personal Preferences**: Use \`manageUserMemory\` to:
+   - **Save**: "Ghi nhớ rằng tôi thích dùng React" -> call \`manageUserMemory\` with action:'add'.
+   - **Recall**: "Tôi thích dùng gì?" -> call \`manageUserMemory\` with action:'search'.
+   - **Remove**: "Quên sở thích đó đi" -> call \`manageUserMemory\` with action:'delete'.
+5. **System Context**: Use \`getSystemInfo\` to understand your own capabilities, versions, and current operational constraints if the user asks "Bạn là ai?", "Bạn có thể làm gì?", or inquiries about your system status.
+`;
+
 export const systemPrompt = ({
   requestHints,
   supportsTools,
@@ -142,7 +154,14 @@ export const systemPrompt = ({
     return `${regularPrompt}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${productPrompt}\n\n${busPrompt}\n\n${pdfPrompt}\n\n${artifactsPrompt}`;
+  const knowledgeBaseSection = `
+**Knowledge Base & Artifacts:**
+1. Use \`knowledgeBaseLookup\` to search for professional advice, technical guides, and past documents (artifacts) in your Supabase brain. This is your "Source of Truth".
+2. If you find a relevant guide (e.g., about "sàn gác lửng"), present the information clearly to the user.
+3. If you learn something new from the user or identify a recurring business process, use \`saveKnowledge\` to persist this information into Supabase for future reference.
+`;
+
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${productPrompt}\n\n${busPrompt}\n\n${knowledgeBaseSection}\n\n${memoryPrompt}\n\n${pdfPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `
