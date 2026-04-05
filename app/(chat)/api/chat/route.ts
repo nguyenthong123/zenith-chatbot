@@ -27,12 +27,14 @@ import { getCustomerLookup } from "@/lib/ai/tools/customer-lookup";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
+import { getOrderSupabaseLookup } from "@/lib/ai/tools/order-supabase-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { getUserLookup } from "@/lib/ai/tools/user-lookup";
 import { webSearch } from "@/lib/ai/tools/web-search";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
@@ -257,6 +259,8 @@ export async function POST(request: Request) {
                   "productLookup",
                   "customerLookup",
                   "orderLookup",
+                  "orderSupabaseLookup",
+                  "userLookup",
                   "billingLookup",
                   "cashBookLookup",
                   "syncFirestoreToSupabase",
@@ -301,6 +305,16 @@ export async function POST(request: Request) {
             orderLookup: getOrderLookup(
               session.user.id,
               session.user.role || "user",
+            ),
+            orderSupabaseLookup: getOrderSupabaseLookup(
+              session.user.id,
+              session.user.role || "user",
+              session.user.email,
+            ),
+            userLookup: getUserLookup(
+              session.user.id,
+              session.user.role || "user",
+              session.user.email,
             ),
             billingLookup: getBillingLookup(
               session.user.id,
