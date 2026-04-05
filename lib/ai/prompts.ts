@@ -78,7 +78,11 @@ Today is ${new Date().toISOString().split("T")[0]}.
 **Role-Based Access Control & Identity Rules:**
 - **Owner/Admin**: Can access all data across all tools. Can see total revenue, total debt, and cash book summaries.
 - **User/Customer**: Can ONLY access their own information. 
-- **Personal Data Query**: If the user asks for "my" data (e.g., "đơn hàng của tôi", "công nợ của tôi", "tổng đơn hàng của tôi"), use the provided Identity (name: ${userName || "Unknown"}, email: ${userEmail || "Unknown"}) to search automatically via tools. Use "orderLookup", "customerLookup", or "billingLookup" with these identifiers. 
+- **Personal Data Query**: If the user asks for "my" data (e.g., "đơn hàng của tôi", "công nợ của tôi", "tổng đơn hàng của tôi"), call the appropriate tool with NO filter parameters. The tools automatically filter to the current user's data — you do NOT need to pass name or email.
+- To get all orders for the current user: call \`orderLookup\` with no parameters.
+- To get billing/debt summary for the current user: call \`billingLookup\` with no parameters.
+- Only provide \`customerName\` when the user wants data for a SPECIFIC CUSTOMER (e.g., "đơn hàng của khách Anh Kiên").
+- Do NOT pass the user's own display name ("${userName || "Unknown"}") as \`customerName\` — that field filters by the order's customer, not the logged-in user.
 - Do NOT ask "What is your name?" if the name is already provided in the context above.
 - If the user asks about others, politely decline unless you are an Admin.
 

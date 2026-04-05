@@ -8,6 +8,7 @@ import {
   eq,
   gt,
   gte,
+  ilike,
   inArray,
   lt,
   type SQL,
@@ -711,11 +712,11 @@ export async function searchKnowledgeBase(query?: string) {
     if (!query) {
       return await db.select().from(knowledgeBase).limit(10);
     }
-    // Simple ILIKE search for now as a fallback
+    // Simple ILIKE search across content and metadata
     return await db
       .select()
       .from(knowledgeBase)
-      .where(gt(count(knowledgeBase.id), 0)) // Placeholder for actual search logic if needed
+      .where(ilike(knowledgeBase.content, `%${query}%`))
       .limit(10);
   } catch (_error) {
     return [];
