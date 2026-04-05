@@ -15,7 +15,6 @@ export class ZaloClient {
    */
   private async ensureValidToken(): Promise<string> {
     const now = new Date();
-    // Thêm biên an tử 5 phút (300,000ms) để tránh token hết hạn giữa chừng
     const buffer = 5 * 60 * 1000;
 
     // 1. Kiểm tra trong bộ nhớ
@@ -30,54 +29,58 @@ export class ZaloClient {
     // 2. Thử lấy từ Database
     const config = await getZaloConfig();
     if (config && config.expiresAt.getTime() > now.getTime() + buffer) {
+      console.log("[ZaloClient] Using valid token from Database.");
       this.accessToken = config.accessToken;
       this.refreshToken = config.refreshToken;
       this.expiresAt = config.expiresAt;
       return this.accessToken;
     }
 
-    // 3. Nếu token DB hết hạn nhưng có Refresh Token -> Tự refresh
-    if (config?.refreshToken) {
+    // 3. Ưu tiên: Nếu ENV có token MỚI hơn cái đang có trong memory/DB (giả sử user vừa cập nhật .env)
+    const envAt = process.env.ZALO_ACCESS_TOKEN;
+    const envRt = process.env.ZALO_REFRESH_TOKEN;
+
+    if (envAt && envAt !== this.accessToken && envAt !== config?.accessToken) {
+      console.log(
+        "[ZaloClient] New token detected in ENV. Updating storage...",
+      );
+      const initialExpiresAt = new Date(Date.now() + 3600 * 1000); // 1h
+
+      await setZaloConfig({
+        accessToken: envAt,
+        refreshToken: envRt || config?.refreshToken || "",
+        expiresAt: initialExpiresAt,
+      });
+
+      this.accessToken = envAt;
+      this.refreshToken = envRt || config?.refreshToken || null;
+      this.expiresAt = initialExpiresAt;
+      return this.accessToken;
+    }
+
+    // 4. Nếu token DB hết hạn nhưng có Refresh Token -> Tự refresh
+    const refreshKey = config?.refreshToken || envRt;
+    if (refreshKey) {
       try {
-        return await this.refreshAccessToken(config.refreshToken);
+        return await this.refreshAccessToken(refreshKey);
       } catch (error) {
         console.error("[ZaloClient] Automated periodic refresh failed:", error);
       }
     }
 
-    // 4. Fallback cuối cùng: Dùng Token trong ENV và lưu vào DB cho các lần sau
-    if (
-      process.env.ZALO_ACCESS_TOKEN &&
-      process.env.ZALO_REFRESH_TOKEN &&
-      !this.accessToken
-    ) {
-      console.log("[ZaloClient] Initializing DB with tokens from ENV...");
-      const initialAccessToken = process.env.ZALO_ACCESS_TOKEN;
-      const initialRefreshToken = process.env.ZALO_REFRESH_TOKEN;
-      const initialExpiresAt = new Date(Date.now() + 3600 * 1000); // Mặc định 1h
-
-      await setZaloConfig({
-        accessToken: initialAccessToken,
-        refreshToken: initialRefreshToken,
-        expiresAt: initialExpiresAt,
-      });
-
-      this.accessToken = initialAccessToken;
-      this.refreshToken = initialRefreshToken;
-      this.expiresAt = initialExpiresAt;
-      return this.accessToken;
-    }
-
-    // Nếu chỉ có Access Token (kiểu cũ)
-    if (process.env.ZALO_ACCESS_TOKEN && !this.accessToken) {
-      this.accessToken = process.env.ZALO_ACCESS_TOKEN;
-      return this.accessToken;
-    }
-
+    // Final fallback
     if (this.accessToken) return this.accessToken;
 
+    if (envAt) {
+      console.warn(
+        "[ZaloClient] Falling back to ENV Access Token without Refresh capability.",
+      );
+      this.accessToken = envAt;
+      return envAt;
+    }
+
     throw new Error(
-      "Không tìm thấy Zalo Access Token hợp lệ trong DB hoặc ENV.",
+      "Không tìm thấy Zalo Access Token hợp lệ. Vui lòng kiểm tra ZALO_ACCESS_TOKEN và ZALO_REFRESH_TOKEN.",
     );
   }
 
@@ -111,13 +114,12 @@ export class ZaloClient {
     const result = await response.json();
 
     if (result.error) {
-      console.error("[ZaloClient] Refresh error detail:", result);
+      console.error("[ZaloClient] Zalo OAuth Refresh Error:", result);
       throw new Error(`Zalo Refresh Failed: ${result.message || result.error}`);
     }
 
     const newAccessToken = result.access_token;
     const newRefreshToken = result.refresh_token;
-    // expires_in thường là số giây (ví dụ 3600 hoặc 90000)
     const expiresIn = parseInt(result.expires_in) || 3600;
     const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
@@ -133,7 +135,7 @@ export class ZaloClient {
     this.expiresAt = expiresAt;
 
     console.log(
-      `[ZaloClient] Token refreshed. New expiry: ${expiresAt.toISOString()}`,
+      `[ZaloClient] Token refreshed successfully. Valid until: ${expiresAt.toISOString()}`,
     );
     return newAccessToken;
   }
@@ -162,24 +164,30 @@ export class ZaloClient {
     // Xử lý lỗi Token hết hạn bất ngờ (-216: Access token invalid)
     if (result.error === -216 || result.error === -201) {
       console.warn(
-        "[ZaloClient] Detected invalid token. Searching for refresh token in DB...",
+        "[ZaloClient] Token invalid/expired. Attempting real-time refresh...",
       );
       const config = await getZaloConfig();
-      if (config?.refreshToken) {
+      const refreshKey = config?.refreshToken || process.env.ZALO_REFRESH_TOKEN;
+
+      if (refreshKey) {
         try {
-          const newToken = await this.refreshAccessToken(config.refreshToken);
-          console.log("[ZaloClient] Retry sending message with new token...");
+          const newToken = await this.refreshAccessToken(refreshKey);
+          console.log("[ZaloClient] Retrying send message with new token...");
           result = await this.post(
             "https://openapi.zalo.me/v2.0/oa/message",
             payload,
             newToken,
           );
-        } catch (refreshError) {
+        } catch (refreshError: any) {
           console.error(
-            "[ZaloClient] Critical: Could not refresh token during retry:",
-            refreshError,
+            "[ZaloClient] Critical: Refresh failed during retry:",
+            refreshError.message,
           );
         }
+      } else {
+        console.error(
+          "[ZaloClient] No Refresh Token found in DB or ENV. Cannot auto-refresh.",
+        );
       }
     }
 
