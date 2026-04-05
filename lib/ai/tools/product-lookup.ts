@@ -45,7 +45,7 @@ export const getProductLookup = (
           or(
             eq(priceList.ownerId, userId),
             eq(priceList.ownerEmail, userEmail ?? ""),
-          ),
+          )!,
         );
 
         // 1. Search in products table

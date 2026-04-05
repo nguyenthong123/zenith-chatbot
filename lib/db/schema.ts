@@ -104,7 +104,7 @@ export const document = pgTable(
     id: uuid("id").notNull(),
     createdAt: timestamp("createdAt").notNull(),
     title: text("title").notNull(),
-    kind: text("kind").notNull(),
+    kind: text("kind").notNull().$type<"text" | "code" | "image" | "sheet">(),
     content: text("content"),
     userId: uuid("userId")
       .notNull()
