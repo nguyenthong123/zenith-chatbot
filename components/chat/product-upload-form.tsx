@@ -81,7 +81,9 @@ export function ProductUploadForm() {
       const base64Images = await Promise.all(
         files.map((f) => encodeFileToBase64(f)),
       );
-      base64Images.forEach((b64) => formData.append("imagesBase64", b64));
+      for (const b64 of base64Images) {
+        formData.append("imagesBase64", b64);
+      }
 
       const result = await handleInteractiveProductUpload(formData);
       if (result.success) {
@@ -91,8 +93,10 @@ export function ProductUploadForm() {
       } else {
         setErrorMsg(result.message || "Lỗi khi lưu sản phẩm.");
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Đã xảy ra lỗi không xác định.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.";
+      setErrorMsg(message);
     } finally {
       setIsUploading(false);
     }
@@ -107,6 +111,7 @@ export function ProductUploadForm() {
           Sản phẩm đã được lưu an toàn vào cơ sở dữ liệu và Cloudinary.
         </p>
         <button
+          type="button"
           onClick={() => setSuccess(false)}
           className="mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80"
         >
@@ -130,7 +135,8 @@ export function ProductUploadForm() {
         </p>
       </div>
 
-      <div
+      <section
+        aria-label="Drop zone for uploading images"
         className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
           isDragging
             ? "border-primary bg-primary/5"
@@ -164,13 +170,13 @@ export function ProductUploadForm() {
           accept="image/*"
           className="hidden"
         />
-      </div>
+      </section>
 
       {previews.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {previews.map((preview, idx) => (
             <div
-              key={idx}
+              key={preview}
               className="relative group rounded-md border overflow-hidden h-20 w-20 flex-shrink-0 bg-muted"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

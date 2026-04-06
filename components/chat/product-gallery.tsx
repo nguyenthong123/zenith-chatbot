@@ -32,23 +32,17 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
         )}
       >
         {displayImages.map((url, idx) => (
-          <div
-            key={`${url}-${idx}`}
-            role="button"
-            tabIndex={0}
+          <button
+            key={url}
+            type="button"
             className={cn(
-              "relative aspect-square cursor-pointer overflow-hidden rounded-xl bg-muted transition-transform duration-500 hover:scale-[1.02] active:scale-95",
+              "relative aspect-square cursor-pointer overflow-hidden rounded-xl bg-muted transition-transform duration-500 hover:scale-[1.02] active:scale-95 border-0 p-0",
               images.length === 3 && idx === 0 && "sm:col-span-1 sm:row-span-1",
               images.length > 3 &&
                 idx === 0 &&
                 "sm:col-span-2 sm:row-span-2 aspect-auto sm:aspect-square",
             )}
             onClick={() => setSelectedImage(idx)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                setSelectedImage(idx);
-              }
-            }}
           >
             <Image
               src={url}
@@ -72,7 +66,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 +{images.length - 6}
               </div>
             )}
-          </div>
+          </button>
         ))}
       </div>
 
