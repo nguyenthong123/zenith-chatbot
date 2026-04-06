@@ -7,11 +7,7 @@ async function checkHighPrices() {
     .select()
     .from(product)
     .where(gt(product.priceSell, 100000000)); // Check products > 100 million
-
-  console.log("--- Products with prices > 100M ---");
-  highPriceProducts.forEach((p) => {
-    console.log(`- ${p.name}: ${p.priceSell?.toLocaleString()} VNĐ`);
-  });
+  highPriceProducts.forEach((_p) => {});
   process.exit(0);
 }
 

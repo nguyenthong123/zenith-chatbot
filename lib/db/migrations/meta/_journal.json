@@ -29,6 +29,20 @@
       "when": 1775385056291,
       "tag": "0003_famous_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775404800000,
+      "tag": "0004_schema_align",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775433049286,
+      "tag": "0005_keen_nitro",
+      "breakpoints": true
     }
   ]
 }

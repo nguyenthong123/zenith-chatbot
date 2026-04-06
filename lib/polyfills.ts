@@ -6,7 +6,6 @@
 if (typeof globalThis !== "undefined") {
   if (!(globalThis as any).DOMMatrix) {
     (globalThis as any).DOMMatrix = class DOMMatrix {
-      constructor() {}
       static fromMatrix() {
         return new DOMMatrix();
       }
@@ -21,7 +20,6 @@ if (typeof globalThis !== "undefined") {
 
   if (!(globalThis as any).Path2D) {
     (globalThis as any).Path2D = class Path2D {
-      constructor() {}
       addPath() {}
       closePath() {}
       moveTo() {}

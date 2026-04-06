@@ -29,14 +29,22 @@ export const login = async (
 
     // Authenticate with Supabase Auth
     const supabase = await createSupabaseServerClient();
-    const { error: supabaseError } = await supabase.auth.signInWithPassword({
-      email: validatedData.email,
-      password: validatedData.password,
-    });
+    const { data: supabaseData, error: supabaseError } =
+      await supabase.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
 
-    if (supabaseError) {
+    if (supabaseError || !supabaseData?.user) {
       return { status: "failed" };
     }
+
+    // Ensure local DB is in sync
+    await ensureLocalUserSync(
+      validatedData.email,
+      validatedData.password,
+      supabaseData.user.id,
+    );
 
     // Also sign in with NextAuth to maintain app session
     await signIn("credentials", {
@@ -89,11 +97,6 @@ export const register = async (
       });
 
     if (supabaseError) {
-      console.error("[register] Supabase Auth signUp error:", {
-        code: supabaseError.code,
-        message: supabaseError.message,
-      });
-
       // If user already exists, we might still fail if we don't have a local record
       if (
         supabaseError.code === "user_already_exists" ||
@@ -108,7 +111,7 @@ export const register = async (
             redirect: false,
           });
           return { status: "success" };
-        } catch (e) {
+        } catch (_e) {
           return { status: "user_exists" };
         }
       }
@@ -116,16 +119,11 @@ export const register = async (
     }
 
     // When "Confirm email" is disabled, Supabase might return user with empty identities if they exist
-    const isExistingUser =
+    const _isExistingUser =
       supabaseData?.user?.identities &&
       supabaseData.user.identities.length === 0;
 
     if (supabaseData?.user) {
-      console.log(
-        `[register] Supabase Auth status: ${isExistingUser ? "Existing" : "New"} | user id:`,
-        supabaseData.user.id,
-      );
-
       // Ensure local DB is in sync
       await ensureLocalUserSync(
         validatedData.email,
@@ -140,8 +138,6 @@ export const register = async (
       password: validatedData.password,
       redirect: false,
     });
-
-    console.log("[register] Registration and sign-in completed successfully");
     return { status: "success" };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -149,11 +145,6 @@ export const register = async (
     }
 
     if (error instanceof AuthError) {
-      console.error(
-        "[register] Auth error during registration:",
-        error.type,
-        error.message,
-      );
       return { status: "failed" };
     }
 
@@ -170,22 +161,12 @@ async function ensureLocalUserSync(
   try {
     const [existingUser] = await getUser(email);
     if (!existingUser) {
-      console.log(`[register] Syncing local user for ${email} with ID ${id}`);
       await createUser(email, password, id);
     } else {
-      console.log(`[register] Local DB user already exists for ${email}`);
       // If user exists but has no password (e.g. from social login), update it
       if (!existingUser.password) {
-        console.log(
-          `[register] Existing user ${email} from social login found. Updating with password.`,
-        );
         await updateUserPassword(email, password);
       }
     }
-  } catch (dbError) {
-    console.error(
-      "[register] CRITICAL: Failed to sync local DB user:",
-      dbError instanceof Error ? dbError.message : String(dbError),
-    );
-  }
+  } catch (_dbError) {}
 }

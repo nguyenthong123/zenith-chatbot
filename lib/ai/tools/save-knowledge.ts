@@ -27,7 +27,6 @@ export const saveKnowledge = (userId: string) =>
           message: "Knowledge successfully saved to the Supabase database.",
         };
       } catch (error) {
-        console.error("Save knowledge failed:", error);
         return {
           error: "Failed to save knowledge.",
           message: error instanceof Error ? error.message : String(error),

@@ -48,17 +48,27 @@ export const regularPrompt = `You are a helpful assistant. Keep responses concis
 `;
 
 export const productPrompt = `
-You have access to a product and price list database. Use the \`productLookup\` tool to help users find information about products, their specifications, and current pricing.
+You have access to a product and price list database. Use the \`productLookup\` tool to help users find information.
 - When users ask about product availability or prices, always use \`productLookup\`.
 - If a product is not found, suggest related categories or check if the name might be misspelled.
-- Price lists contain collections of products with specific headers (e.g., promotional prices).
+
+**Saving Products with Multiple Images (Premium Gallery):**
+1. If a user asks to "lưu", "thêm", or "tạo" a product, and they DO NOT explicitly provide attachment URLs in the chat, **USE THE \`requestProductUpload\` TOOL**. This will show them a secure interactive UI form where they can drop files directly into Cloudinary without chat upload failures.
+2. If the user ALREADY uploaded images into the chat and you see a block labeled "Attachment URLs (for tool use)", THEN use the \`saveProduct\` tool to extract those URLs and save programmatically.
+3. Both tools behave similarly: if a product with the same name already exists, it will **append** new images to that product.
+4. **CRITICAL:** Always favor \`requestProductUpload\` for a better User Experience if they just say "I want to upload a product" or "Lưu sản phẩm mới".
+5. **MULTI-IMAGE HANDLING:** If using \`saveProduct\`, search through the entire recent message history for "Attachment URLs (for tool use)" blocks and collect EVERY URL from the lists. Do not just pick the first one.
+6. **DO NOT REFUSE** to save because you think the image looks like a screenshot.
+7. Use the user's provided \`name\` and \`sku\` as primary values in the form or tool.
 `;
 
-export const pdfPrompt = `
-You can read and analyze PDF files. When a user uploads a PDF file, you will see it as an attachment.
-To read the file, look for a block in the user's message labeled "Attachment URLs (for tool use)". 
-Find the "URL" value for the desired PDF and pass that ACTUAL LINK string to the \`readPdf\` tool.
-NEVER use placeholder strings like "attachment_url" or "URL". Always use the full http/https link provided in the message.
+export const attachmentPrompt = `
+**Attachment & Multi-modal Rules:**
+1. You can read and analyze uploaded files (PDFs, Images). When a user uploads a file, it appears as an attachment.
+2. To use attachments with a tool, look for a block in the user's message labeled "Attachment URLs (for tool use)". 
+3. Extract the URL values and pass them as an **array of strings** to the tool's parameter (e.g., \`imageUrls\` for \`saveProduct\`).
+4. NEVER use placeholder strings like "attachment_url" or "URL". ALWAYS use the full http/https links provided in the message.
+5. If multiple files are uploaded, pass ALL their URLs as an array to the tool.
 `;
 
 export const businessPrompt = (
@@ -161,7 +171,7 @@ export const systemPrompt = ({
 3. If you learn something new from the user or identify a recurring business process, use \`saveKnowledge\` to persist this information into Supabase for future reference.
 `;
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${productPrompt}\n\n${busPrompt}\n\n${knowledgeBaseSection}\n\n${memoryPrompt}\n\n${pdfPrompt}\n\n${artifactsPrompt}`;
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${attachmentPrompt}\n\n${productPrompt}\n\n${busPrompt}\n\n${knowledgeBaseSection}\n\n${memoryPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `

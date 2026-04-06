@@ -4,7 +4,6 @@ import {
   doublePrecision,
   foreignKey,
   index,
-  integer,
   json,
   numeric,
   pgTable,
@@ -183,31 +182,38 @@ export const knowledgeBase = pgTable("knowledge_base", {
 
 export type KnowledgeBase = typeof knowledgeBase.$inferSelect;
 
-export const product = pgTable("products", {
-  id: text("id").primaryKey().notNull(),
-  name: text("name").notNull(),
-  sku: varchar("sku", { length: 255 }),
-  category: text("category"),
-  priceBuy: bigint("priceBuy", { mode: "number" }),
-  priceSell: bigint("priceSell", { mode: "number" }),
-  stock: numeric("stock").default("0"),
-  unit: varchar("unit", { length: 100 }),
-  specification: text("specification"),
-  packaging: text("packaging"),
-  density: text("density"),
-  status: varchar("status", { length: 50 }),
-  note: text("note"),
-  expiryDate: text("expiryDate"),
-  metadata: json("metadata"),
-  ownerId: uuid("ownerId").references(() => user.id),
-  ownerEmail: text("ownerEmail"),
-  createdBy: text("createdBy"),
-  createdByEmail: text("createdByEmail"),
-  updatedBy: text("updatedBy"),
-  updatedByEmail: text("updatedByEmail"),
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-});
+export const product = pgTable(
+  "products",
+  {
+    id: text("id").primaryKey().notNull(),
+    name: text("name").notNull(),
+    sku: varchar("sku", { length: 255 }),
+    category: text("category"),
+    priceBuy: bigint("priceBuy", { mode: "number" }),
+    priceSell: bigint("priceSell", { mode: "number" }),
+    stock: numeric("stock").default("0"),
+    unit: varchar("unit", { length: 100 }),
+    specification: text("specification"),
+    packaging: text("packaging"),
+    density: text("density"),
+    status: varchar("status", { length: 50 }),
+    note: text("note"),
+    expiryDate: text("expiryDate"),
+    metadata: json("metadata"),
+    imageUrl: text("imageUrl"),
+    ownerId: uuid("ownerId").references(() => user.id),
+    ownerEmail: text("ownerEmail"),
+    createdBy: text("createdBy"),
+    createdByEmail: text("createdByEmail"),
+    updatedBy: text("updatedBy"),
+    updatedByEmail: text("updatedByEmail"),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("product_name_owner_idx").on(table.name, table.ownerId),
+  ],
+);
 
 export type Product = typeof product.$inferSelect;
 

@@ -29,12 +29,29 @@ function emailToHue(email: string): number {
   return Math.abs(hash) % 360;
 }
 
-export function SidebarUserNav({ user }: { user: User }) {
+export function SidebarUserNav({ user }: { user?: User | null }) {
   const router = useRouter();
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
 
   const isGuest = guestRegex.test(data?.user?.email ?? "");
+
+  if (!user && status !== "loading") {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            className="h-8 px-2 rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white transition-all duration-200 hover:opacity-90 hover:shadow-md"
+            onClick={() => router.push("/login")}
+          >
+            <span className="truncate text-[13px] font-semibold text-center w-full">
+              Sign in to save chats
+            </span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   return (
     <SidebarMenu>
@@ -61,7 +78,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                 <div
                   className="size-5 shrink-0 rounded-full ring-1 ring-sidebar-border/50"
                   style={{
-                    background: `linear-gradient(135deg, oklch(0.35 0.08 ${emailToHue(user.email ?? "")}), oklch(0.25 0.05 ${emailToHue(user.email ?? "") + 40}))`,
+                    background: `linear-gradient(135deg, oklch(0.35 0.08 ${emailToHue(user?.email ?? "")}), oklch(0.25 0.05 ${emailToHue(user?.email ?? "") + 40}))`,
                   }}
                 />
                 <span className="truncate text-[13px]" data-testid="user-email">

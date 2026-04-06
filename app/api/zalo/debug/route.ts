@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getZaloConfig } from "@/lib/db/queries";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const config = await getZaloConfig();
     const envAt = process.env.ZALO_ACCESS_TOKEN;

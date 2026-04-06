@@ -13,22 +13,17 @@ if (!admin.apps.length) {
 
 async function checkAuthUsers() {
   const listUsersResult = await admin.auth().listUsers(1000);
-  console.log(`Total Auth Users: ${listUsersResult.users.length}`);
 
-  let guests = 0;
+  let _guests = 0;
   let real = 0;
 
   listUsersResult.users.forEach((user) => {
     if (user.email?.startsWith("guest-") || !user.email) {
-      guests++;
+      _guests++;
     } else {
       real++;
-      if (real < 5) console.log(`Real Auth User: ${user.email}`);
     }
   });
-
-  console.log(`Auth Guests: ${guests}`);
-  console.log(`Auth Real: ${real}`);
 }
 
 checkAuthUsers().catch(console.error);

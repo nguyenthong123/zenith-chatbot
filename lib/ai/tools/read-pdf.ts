@@ -15,12 +15,7 @@ export const readPdf = tool({
       .describe("The actual URL of the PDF file (starting with http/https)."),
   }),
   execute: async ({ url }) => {
-    console.log("readPdf: Fetching URL:", url);
-
     if (url === "attachment_url" || url === "URL") {
-      console.error(
-        "readPdf: AI provided a placeholder URL instead of an actual one.",
-      );
       return {
         error: "Invalid URL provided.",
         message:
@@ -32,11 +27,6 @@ export const readPdf = tool({
       const response = await fetch(url);
 
       if (!response.ok) {
-        console.error(
-          "readPdf: Failed to fetch PDF:",
-          response.status,
-          response.statusText,
-        );
         return {
           error: `Failed to fetch PDF: ${response.status} ${response.statusText}`,
         };
@@ -53,7 +43,6 @@ export const readPdf = tool({
         isTruncated: data.text.length > 20000,
       };
     } catch (error) {
-      console.error("readPdf: Unexpected error:", error);
       return {
         url,
         error: "An unexpected error occurred while reading the PDF.",

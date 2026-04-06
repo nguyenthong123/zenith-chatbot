@@ -24,15 +24,28 @@ export const getProductLookup = (
     }),
     execute: async ({ query }) => {
       try {
-        const conditions = [
-          or(
-            ilike(product.name, `%${query}%`),
-            ilike(product.category, `%${query}%`),
-            ilike(product.sku, `%${query}%`),
-          ),
-        ];
+        // Standardize common terms (e.g. "ly" to "mm" in Vietnamese context)
+        const normalizedQuery = query.toLowerCase().replace(/\s+ly\b/g, "mm");
 
-        const plConditions = [ilike(priceList.title, `%${query}%`)];
+        // Split into keywords to allow partial/out-of-order matches
+        const keywords = normalizedQuery
+          .split(/\s+/)
+          .filter((k) => k.length > 0);
+
+        // Build keyword conditions (all keywords must be present in either name, category, or sku)
+        const keywordConditions = keywords.map((kw) =>
+          or(
+            ilike(product.name, `%${kw}%`),
+            ilike(product.category, `%${kw}%`),
+            ilike(product.sku, `%${kw}%`),
+          ),
+        );
+
+        const conditions =
+          keywordConditions.length > 0 ? [...keywordConditions] : [];
+        const plConditions = keywords.map((kw) =>
+          ilike(priceList.title, `%${kw}%`),
+        );
 
         // Mandatory account isolation by email/ID
         conditions.push(
@@ -72,6 +85,12 @@ export const getProductLookup = (
           products: products.map((p: Product) => ({
             ...p,
             priceBuy: userRole === "admin" ? p.priceBuy : undefined, // Only admins see cost price
+            imageUrls: p.imageUrl
+              ? p.imageUrl
+                  .split(",")
+                  .map((url) => url.trim())
+                  .filter(Boolean)
+              : [],
           })),
           priceLists: priceLists.map((pl: PriceList) => ({
             title: pl.title,
@@ -83,7 +102,6 @@ export const getProductLookup = (
           })),
         };
       } catch (error) {
-        console.error("Product lookup failed:", error);
         return {
           error: "Failed to search for products.",
           message: error instanceof Error ? error.message : String(error),

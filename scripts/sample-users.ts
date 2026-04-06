@@ -15,12 +15,7 @@ const firestore = admin.firestore();
 
 async function sampleUsers() {
   const snapshot = await firestore.collection("users").limit(10).get();
-  console.log("Sample users format:");
-  snapshot.forEach((doc) => {
-    console.log(`ID: ${doc.id}`);
-    console.log(JSON.stringify(doc.data(), null, 2));
-    console.log("-------------------");
-  });
+  snapshot.forEach((_doc) => {});
 }
 
 sampleUsers().catch(console.error);

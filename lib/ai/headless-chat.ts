@@ -50,8 +50,13 @@ export async function generateHeadlessResponse({
     messages,
     stopWhen: stepCountIs(5),
     tools: {
-      productLookup: getProductLookup(userId, userRole),
-      customerLookup: getCustomerLookup(userId, userRole),
+      productLookup: getProductLookup(userId, userRole, userEmail || undefined),
+      saveProduct: getSaveProductTool(userId, userEmail || undefined),
+      customerLookup: getCustomerLookup(
+        userId,
+        userRole,
+        userEmail || undefined,
+      ),
       orderLookup: getOrderLookup(userId, userRole),
       orderSupabaseLookup: getOrderSupabaseLookup(userId, userRole, userEmail),
       userLookup: getUserLookup(userId, userRole, userEmail),

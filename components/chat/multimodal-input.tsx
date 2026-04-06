@@ -386,17 +386,13 @@ function PureMultimodalInput({
         </div>
       )}
 
-      {!editingMessage &&
-        !isLoading &&
-        messages.length === 0 &&
-        attachments.length === 0 &&
-        uploadQueue.length === 0 && (
-          <SuggestedActions
-            chatId={chatId}
-            selectedVisibilityType={selectedVisibilityType}
-            sendMessage={sendMessage}
-          />
-        )}
+      {!editingMessage && !isLoading && (
+        <SuggestedActions
+          chatId={chatId}
+          selectedVisibilityType={selectedVisibilityType}
+          sendMessage={sendMessage}
+        />
+      )}
 
       <input
         className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
