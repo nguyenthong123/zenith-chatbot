@@ -51,13 +51,24 @@ export default function Page() {
       <AuthForm action={handleSubmit} defaultEmail={email}>
         {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
         <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
-        <p className="text-center text-[13px] text-muted-foreground">
-          {"No account? "}
+        <p className="text-center text-[13px] text-muted-foreground flex flex-col gap-2">
+          <span>
+            {"No account? "}
+            <Link
+              className="text-foreground underline-offset-4 hover:underline"
+              href="/register"
+            >
+              Sign up
+            </Link>
+          </span>
+          <span className="w-full flex items-center gap-2 before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border my-2">
+            OR
+          </span>
           <Link
-            className="text-foreground underline-offset-4 hover:underline"
-            href="/register"
+            className="text-foreground underline-offset-4 hover:underline text-sm font-medium"
+            href="/api/auth/guest"
           >
-            Sign up
+            Continue as Guest
           </Link>
         </p>
       </AuthForm>

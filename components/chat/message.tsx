@@ -20,6 +20,8 @@ import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
+import { ProductGallery } from "./product-gallery";
+import { ProductUploadForm } from "./product-upload-form";
 
 const PurePreviewMessage = ({
   addToolApprovalResponse,
@@ -266,6 +268,72 @@ const PurePreviewMessage = ({
         </div>
       );
     }
+    if (type === "tool-saveProduct" || type === "tool-productLookup") {
+      const { toolCallId, state } = part;
+      const widthClass = "w-[min(100%,450px)]";
+
+      if (state === "output-available") {
+        const output = part.output as any;
+
+        return (
+          <div className={widthClass} key={toolCallId}>
+            <Tool className="w-full" defaultOpen={true}>
+              <ToolHeader state={state} toolName={type === "tool-saveProduct" ? "Save Product" : "Product Lookup"} type="dynamic-tool" />
+              <ToolContent>
+                <div className="space-y-4 px-4 py-3">
+                  {type === "tool-saveProduct" && (
+                    <div className="text-sm font-medium text-foreground">
+                      {output.message}
+                    </div>
+                  )}
+
+                  {/* Render saved images gallery */}
+                  {type === "tool-saveProduct" && output.imageUrls?.length > 0 && (
+                    <ProductGallery images={output.imageUrls} />
+                  )}
+
+                  {/* Render looked up products */}
+                  {type === "tool-productLookup" && output.products?.length > 0 && (
+                    <div className="space-y-6">
+                      {output.products.map((p: any, pIdx: number) => (
+                        <div key={p.id || pIdx} className="space-y-2 border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-foreground">{p.name}</h4>
+                            <span className="text-xs text-muted-foreground uppercase tracking-wider">{p.sku}</span>
+                          </div>
+                          {p.category && <p className="text-xs text-muted-foreground">{p.category}</p>}
+                          {p.imageUrls?.length > 0 && (
+                            <ProductGallery images={p.imageUrls} productName={p.name} />
+                          )}
+                          {p.note && <p className="text-sm text-muted-foreground line-clamp-2 italic">"{p.note}"</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {type === "tool-productLookup" && (!output.products || output.products.length === 0) && (
+                    <div className="text-sm text-muted-foreground italic">
+                      {output.message || "No products found."}
+                    </div>
+                  )}
+                </div>
+              </ToolContent>
+            </Tool>
+          </div>
+        );
+      }
+
+      return (
+        <div className={widthClass} key={toolCallId}>
+          <Tool className="w-full" defaultOpen={true}>
+            <ToolHeader state={state} toolName={type === "tool-saveProduct" ? "Save Product" : "Product Lookup"} type="dynamic-tool" />
+            <ToolContent>
+              <ToolInput input={part.input || (part as any).args} />
+            </ToolContent>
+          </Tool>
+        </div>
+      );
+    }
 
     if (type === "tool-requestSuggestions") {
       const { toolCallId, state } = part;
@@ -278,7 +346,7 @@ const PurePreviewMessage = ({
         >
           <ToolHeader state={state} type="tool-requestSuggestions" />
           <ToolContent>
-            {state === "input-available" && <ToolInput input={part.input} />}
+            {state === "input-available" && <ToolInput input={part.input || (part as any).args} />}
             {state === "output-available" && (
               <ToolOutput
                 errorText={undefined}
@@ -301,6 +369,18 @@ const PurePreviewMessage = ({
         </Tool>
       );
     }
+
+    if (type === "tool-requestProductUpload") {
+      const { toolCallId, state } = part;
+      return (
+        <div className="w-[min(100%,500px)]" key={toolCallId}>
+          <ProductUploadForm />
+          {state !== "output-available" && (
+            <div className="text-xs text-muted-foreground animate-pulse mt-2 ml-1">Đang chờ bạn tải xong hình ảnh...</div>
+          )}
+        </div>
+      );
+    }
     if (
       type.startsWith("tool-check") ||
       type.startsWith("call-check") ||
@@ -320,7 +400,7 @@ const PurePreviewMessage = ({
                 <ToolOutput errorText={undefined} output={toolPart.output} />
               )}
               {(state === "input-available" || state === "input-streaming") && (
-                <ToolInput input={toolPart.input} />
+                <ToolInput input={toolPart.input || (toolPart as any).args} />
               )}
             </ToolContent>
           </Tool>

@@ -7,6 +7,7 @@ import { getCashBookLookup } from "@/lib/ai/tools/cash-book-lookup";
 import { getCustomerLookup } from "@/lib/ai/tools/customer-lookup";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
+import { getSaveProductTool } from "@/lib/ai/tools/save-product";
 
 export interface HeadlessChatOptions {
   userId: string;
@@ -48,8 +49,9 @@ export async function generateHeadlessResponse({
     messages,
     stopWhen: stepCountIs(5),
     tools: {
-      productLookup: getProductLookup(userId, userRole),
-      customerLookup: getCustomerLookup(userId, userRole),
+      productLookup: getProductLookup(userId, userRole, userEmail || undefined),
+      saveProduct: getSaveProductTool(userId, userEmail || undefined),
+      customerLookup: getCustomerLookup(userId, userRole, userEmail || undefined),
       orderLookup: getOrderLookup(userId, userRole),
       billingLookup: getBillingLookup(userId, userRole),
       cashBookLookup: getCashBookLookup(userId, userRole),

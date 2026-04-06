@@ -38,6 +38,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "github.com",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "i.ibb.co",
+      },
+      {
+        protocol: "https",
         hostname: "*.public.blob.vercel-storage.com",
       },
     ],
@@ -48,6 +60,9 @@ const nextConfig: NextConfig = {
     appNewScrollHandler: true,
     inlineCss: true,
     turbopackFileSystemCacheForDev: true,
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
   },
 };
 

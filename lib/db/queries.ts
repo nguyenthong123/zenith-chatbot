@@ -21,7 +21,12 @@ import postgres from "postgres";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { ChatbotError } from "../errors";
-import { convertToUIMessages, generateUUID, isValidUUID } from "../utils";
+import {
+  convertToUIMessages,
+  generateStableUUID,
+  generateUUID,
+  isValidUUID,
+} from "../utils";
 import {
   type Chat,
   chat,
@@ -31,6 +36,7 @@ import {
   message,
   order,
   payment,
+  product,
   type Suggestion,
   stream,
   suggestion,
@@ -43,8 +49,18 @@ import {
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
+
+const globalForPostgres = globalThis as unknown as {
+  postgres: ReturnType<typeof postgres> | undefined;
+};
+
 const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-const client = postgres(dbUrl ?? "", { prepare: false });
+const client = globalForPostgres.postgres ?? postgres(dbUrl ?? "", { prepare: false });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPostgres.postgres = client;
+}
+
 export const db = drizzle(client);
 
 export async function getUser(email: string): Promise<User[]> {
@@ -56,8 +72,9 @@ export async function getUser(email: string): Promise<User[]> {
 }
 
 export async function getUserById(id: string): Promise<User[]> {
+  const userUUID = isValidUUID(id) ? id : generateStableUUID(id);
   try {
-    return await db.select().from(user).where(eq(user.id, id));
+    return await db.select().from(user).where(eq(user.id, userUUID));
   } catch (_error) {
     return [];
   }
@@ -100,14 +117,15 @@ export async function createUser(email: string, password: string, id?: string) {
 }
 
 export async function createGuestUser(id?: string) {
-  const email = `guest-${id || generateUUID()}@example.com`;
+  const userUUID = id ? (isValidUUID(id) ? id : generateStableUUID(id)) : generateUUID();
+  const email = `guest-${userUUID}@example.com`;
   const password = generateHashedPassword(generateUUID());
 
   try {
     return await db
       .insert(user)
       .values({
-        id,
+        id: userUUID,
         email,
         password,
         isAnonymous: true,
@@ -120,6 +138,52 @@ export async function createGuestUser(id?: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to create guest user",
+    );
+  }
+}
+
+export async function getOrCreateUser({
+  id,
+  email,
+  name,
+}: { id: string; email?: string; name?: string }) {
+  const userUUID = isValidUUID(id) ? id : generateStableUUID(id);
+
+  try {
+    // 1. Try by UUID
+    const [existingById] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userUUID));
+    if (existingById) return existingById;
+
+    // 2. Try by Email if available
+    if (email) {
+      const [existingByEmail] = await db
+        .select()
+        .from(user)
+        .where(eq(user.email, email));
+      if (existingByEmail) return existingByEmail;
+    }
+
+    // 3. Create new
+    const password = generateHashedPassword(generateUUID());
+    const [newUser] = await db
+      .insert(user)
+      .values({
+        id: userUUID,
+        email: email || `user-${userUUID}@example.com`,
+        name: name || null,
+        password,
+      })
+      .returning();
+
+    return newUser;
+  } catch (error) {
+    console.error("Database error in getOrCreateUser:", error);
+    throw new ChatbotError(
+      "bad_request:database",
+      error instanceof Error ? error.message : "Failed to sync user",
     );
   }
 }
@@ -148,11 +212,14 @@ export async function saveChat({
   title: string;
   visibility: VisibilityType;
 }) {
+  const chatUUID = isValidUUID(id) ? id : generateStableUUID(id);
+  const userUUID = isValidUUID(userId) ? userId : generateStableUUID(userId);
+
   try {
     return await db.insert(chat).values({
-      id,
+      id: chatUUID,
       createdAt: new Date(),
-      userId,
+      userId: userUUID,
       title,
       visibility,
     });
@@ -227,34 +294,12 @@ export async function getChatsByUserId({
   startingAfter?: string | null;
   endingBefore?: string | null;
 }) {
-  if (!isValidUUID(id)) {
-    return { chats: [], hasMore: false };
-  }
-
-  if (startingAfter && !isValidUUID(startingAfter)) {
-    startingAfter = null;
-  }
-
-  if (endingBefore && !isValidUUID(endingBefore)) {
-    endingBefore = null;
-  }
-
+  const userUUID = isValidUUID(id) ? id : generateStableUUID(id);
   try {
     const extendedLimit = limit + 1;
 
-    const query = (whereCondition?: SQL<unknown>) =>
-      db
-        .select()
-        .from(chat)
-        .where(
-          whereCondition
-            ? and(whereCondition, eq(chat.userId, id))
-            : eq(chat.userId, id),
-        )
-        .orderBy(desc(chat.createdAt))
-        .limit(extendedLimit);
-
-    let filteredChats: Chat[] = [];
+    // Base filters
+    const filters: SQL[] = [eq(chat.userId, userUUID)];
 
     if (startingAfter) {
       const [selectedChat] = await db
@@ -263,14 +308,9 @@ export async function getChatsByUserId({
         .where(eq(chat.id, startingAfter))
         .limit(1);
 
-      if (!selectedChat) {
-        throw new ChatbotError(
-          "not_found:database",
-          `Chat with id ${startingAfter} not found`,
-        );
+      if (selectedChat) {
+        filters.push(gt(chat.createdAt, selectedChat.createdAt));
       }
-
-      filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
     } else if (endingBefore) {
       const [selectedChat] = await db
         .select()
@@ -278,17 +318,17 @@ export async function getChatsByUserId({
         .where(eq(chat.id, endingBefore))
         .limit(1);
 
-      if (!selectedChat) {
-        throw new ChatbotError(
-          "not_found:database",
-          `Chat with id ${endingBefore} not found`,
-        );
+      if (selectedChat) {
+        filters.push(lt(chat.createdAt, selectedChat.createdAt));
       }
-
-      filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
-    } else {
-      filteredChats = await query();
     }
+
+    const filteredChats = await db
+      .select()
+      .from(chat)
+      .where(and(...filters))
+      .orderBy(desc(chat.createdAt))
+      .limit(extendedLimit);
 
     const hasMore = filteredChats.length > limit;
 
@@ -298,37 +338,38 @@ export async function getChatsByUserId({
     };
   } catch (error) {
     console.error("Database error in getChatsByUserId:", error);
-    throw new ChatbotError(
-      "bad_request:database",
-      "Failed to get chats by user id",
-    );
+    return { chats: [], hasMore: false };
   }
 }
 
 export async function getChatById({ id }: { id: string }) {
-  if (!isValidUUID(id)) {
-    return null;
-  }
+  const chatUUID = isValidUUID(id) ? id : generateStableUUID(id);
 
   try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
-    if (!selectedChat) {
-      return null;
-    }
-
-    return selectedChat;
+    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, chatUUID));
+    return selectedChat || null;
   } catch (error) {
     console.error("Database error in getChatById:", error);
-    throw new ChatbotError("bad_request:database", "Failed to get chat by id");
+    return null;
   }
 }
 
 export async function saveMessages({ messages }: { messages: DBMessage[] }) {
   try {
-    return await db.insert(message).values(messages);
+    return await db.insert(message).values(
+      messages.map((m) => ({
+        ...m,
+        id: isValidUUID(m.id) ? m.id : generateStableUUID(m.id),
+        chatId: isValidUUID(m.chatId) ? m.chatId : generateStableUUID(m.chatId),
+        createdAt: new Date(),
+      })),
+    );
   } catch (error) {
-    console.error("Database error in saveMessages:", error);
-    throw new ChatbotError("bad_request:database", "Failed to save messages");
+    console.error("Database error in getMessagesByChatId:", error);
+    throw new ChatbotError(
+      "bad_request:database",
+      error instanceof Error ? error.message : "Failed to get messages",
+    );
   }
 }
 
@@ -348,22 +389,17 @@ export async function updateMessage({
 }
 
 export async function getMessagesByChatId({ id }: { id: string }) {
-  if (!isValidUUID(id)) {
-    return [];
-  }
+  const chatUUID = isValidUUID(id) ? id : generateStableUUID(id);
 
   try {
     return await db
       .select()
       .from(message)
-      .where(eq(message.chatId, id))
+      .where(eq(message.chatId, chatUUID))
       .orderBy(asc(message.createdAt));
   } catch (error) {
     console.error("Database error in getMessagesByChatId:", error);
-    throw new ChatbotError(
-      "bad_request:database",
-      "Failed to get messages by chat id",
-    );
+    return [];
   }
 }
 
@@ -701,7 +737,8 @@ export async function createStreamId({
     await db
       .insert(stream)
       .values({ id: streamId, chatId, createdAt: new Date() });
-  } catch (_error) {
+  } catch (error) {
+    console.error("Database error in createStreamId:", error);
     throw new ChatbotError(
       "bad_request:database",
       "Failed to create stream id",
@@ -978,5 +1015,84 @@ export async function searchMessages({
   } catch (error) {
     console.error("Database error in searchMessages:", error);
     return [];
+  }
+}
+
+export async function upsertProduct(data: {
+  id: string;
+  name: string;
+  sku?: string;
+  note?: string;
+  imageUrl?: string;
+  category?: string;
+  ownerId: string;
+  ownerEmail?: string;
+}) {
+  try {
+    console.log(`[upsertProduct] Checking existing for name="${data.name}", sku="${data.sku}", ownerId="${data.ownerId}"`);
+    
+    // Try to find by SKU first if provided, then by Name
+    let existing: (typeof product.$inferSelect)[] = [];
+    if (data.sku) {
+      existing = await db
+        .select()
+        .from(product)
+        .where(and(eq(product.sku, data.sku), eq(product.ownerId, data.ownerId)))
+        .limit(1);
+    }
+    
+    if (existing.length === 0) {
+      existing = await db
+        .select()
+        .from(product)
+        .where(and(eq(product.name, data.name), eq(product.ownerId, data.ownerId)))
+        .limit(1);
+    }
+
+    if (existing.length > 0) {
+      const p = existing[0];
+      console.log(`[upsertProduct] Found existing product ID: ${p.id} (Matched by ${data.sku === p.sku ? 'SKU' : 'Name'}). Updating...`);
+      const newImages =
+        data.imageUrl
+          ?.split(",")
+          .map((i: string) => i.trim())
+          .filter(Boolean) || [];
+      const oldImages =
+        p.imageUrl
+          ?.split(",")
+          .map((i: string) => i.trim())
+          .filter(Boolean) || [];
+
+      // Merge and unique
+      const allImages = Array.from(new Set([...oldImages, ...newImages])).join(
+        ", ",
+      );
+
+      const result = await db
+        .update(product)
+        .set({
+          imageUrl: allImages,
+          note: data.note || p.note,
+          sku: data.sku || p.sku,
+          category: data.category || p.category,
+          updatedAt: new Date(),
+        })
+        .where(eq(product.id, p.id))
+        .returning();
+      console.log(`[upsertProduct] Update returned row:`, result);
+      return result;
+    }
+
+    console.log(`[upsertProduct] No existing found. Inserting new...`);
+    const insertResult = await db.insert(product).values({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    console.log(`[upsertProduct] Insert returned row:`, insertResult);
+    return insertResult;
+  } catch (error) {
+    console.error("Database error in upsertProduct:", error);
+    throw error;
   }
 }

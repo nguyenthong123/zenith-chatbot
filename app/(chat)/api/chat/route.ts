@@ -32,6 +32,7 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { knowledgeBaseLookup } from "@/lib/ai/tools/knowledge-base-lookup";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
+import { getSaveProductTool } from "@/lib/ai/tools/save-product";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -41,13 +42,13 @@ import { getSystemInfo } from "@/lib/ai/tools/system-info";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { getManageUserMemory } from "@/lib/ai/tools/user-memory";
 import { webSearch } from "@/lib/ai/tools/web-search";
-import { isProductionEnvironment } from "@/lib/constants";
+import { requestProductUploadTool } from "@/lib/ai/tools/request-product-upload";
 import {
-  createGuestUser,
   createStreamId,
   deleteChatById,
   getChatById,
   getMessagesByChatId,
+  getOrCreateUser,
   getUserById,
   saveChat,
   saveMessages,
@@ -57,7 +58,12 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
-import { convertToUIMessages, generateUUID, isValidUUID } from "@/lib/utils";
+import {
+  convertToUIMessages,
+  generateStableUUID,
+  generateUUID,
+  isValidUUID,
+} from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
@@ -88,13 +94,6 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       parsedBody;
 
-    if (!isValidUUID(id)) {
-      return new ChatbotError(
-        "bad_request:api",
-        "Invalid chat ID",
-      ).toResponse();
-    }
-
     const [, session] = await Promise.all([
       checkBotId().catch(() => null),
       auth(),
@@ -104,51 +103,43 @@ export async function POST(request: Request) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 
+    const userUUID = isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id);
+    const chatUUID = isValidUUID(id) ? id : generateStableUUID(id);
+
     const chatModel = allowedModelIds.has(selectedChatModel)
       ? selectedChatModel
       : DEFAULT_CHAT_MODEL;
 
-    // const messageCount = await getMessageCountByUserId({
-    //   id: session.user.id,
-    //   differenceInHours: 1,
-    // });
-
-    const isToolApprovalFlow = Boolean(messages);
-
-    const chat = await getChatById({ id });
+    const chat = await getChatById({ id: chatUUID });
     let messagesFromDb: DBMessage[] = [];
     let titlePromise: Promise<string> | null = null;
 
     if (chat) {
-      if (chat.userId !== session.user.id) {
+      if (chat.userId !== userUUID) {
         return new ChatbotError("forbidden:chat").toResponse();
       }
-      messagesFromDb = await getMessagesByChatId({ id });
+      messagesFromDb = await getMessagesByChatId({ id: chatUUID });
     } else {
-      const userExists = await getUserById(session.user.id);
-      if (userExists.length === 0 && session.user.email?.startsWith("guest-")) {
-        await createGuestUser(session.user.id);
-      }
+      await getOrCreateUser({
+        id: userUUID,
+        email: session.user.email ?? undefined,
+        name: session.user.name ?? undefined,
+      });
 
       if (message?.role === "user") {
-        if (!isValidUUID(id)) {
-          return new ChatbotError(
-            "bad_request:api",
-            "Invalid chat ID for new chat",
-          ).toResponse();
-        }
-
-        await saveChat({
-          id,
-          userId: session.user.id,
-          title: "New chat",
-          visibility: selectedVisibilityType,
-        });
         titlePromise = generateTitleFromUserMessage({ message });
+        await saveChat({
+          id: chatUUID,
+          userId: userUUID,
+          title: "New Chat",
+          visibility: selectedVisibilityType || "private",
+        });
       }
     }
 
     let uiMessages: ChatMessage[];
+
+    const isToolApprovalFlow = Boolean(messages);
 
     if (isToolApprovalFlow && messages) {
       const dbMessages = convertToUIMessages(messagesFromDb);
@@ -186,36 +177,42 @@ export async function POST(request: Request) {
       ];
     }
 
-    // Inject attachment URLs into the last message to ensure LLM can see them
-    const lastMessage = uiMessages[uiMessages.length - 1];
-    if (
-      lastMessage &&
-      lastMessage.role === "user" &&
-      lastMessage.attachments &&
-      lastMessage.attachments.length > 0
-    ) {
-      const pdfAttachments = lastMessage.attachments.filter(
-        (a) =>
-          a.contentType?.includes("pdf") ||
-          a.name?.toLowerCase().endsWith(".pdf"),
-      );
+    // Inject attachment URLs into messages
+    uiMessages.forEach((msg) => {
+      if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
+        const toolRelevantAttachments = msg.attachments.filter(
+          (a) =>
+            a.contentType?.includes("pdf") ||
+            a.name?.toLowerCase().endsWith(".pdf") ||
+            a.contentType?.includes("image") ||
+            a.name?.toLowerCase().match(/\.(jpg|jpeg|png|webp)$/i),
+        );
 
-      if (pdfAttachments.length > 0) {
-        const attachmentText = pdfAttachments
-          .map((a) => `[PDF Attachment: ${a.name}, URL: ${a.url}]`)
-          .join("\n");
+        if (toolRelevantAttachments.length > 0) {
+          const attachmentText = toolRelevantAttachments
+            .map(
+              (a, idx) =>
+                `${idx + 1}. [${a.name}](${a.url}) (${a.contentType})`,
+            )
+            .join("\n");
 
-        lastMessage.parts = lastMessage.parts.map((part) => {
-          if (part.type === "text") {
-            return {
-              ...part,
-              text: `${part.text}\n\nAttachment URLs (for tool use):\n${attachmentText}`,
-            };
+          const suffix = `\n\nAttachment URLs (for tool use):\n${attachmentText}`;
+
+          // Find the first text part and append if not already there
+          const textPart = msg.parts.find((p) => p.type === "text");
+          if (textPart && "text" in textPart) {
+            if (!textPart.text.includes("Attachment URLs (for tool use):")) {
+              textPart.text += suffix;
+            }
+          } else {
+            msg.parts.push({
+              type: "text",
+              text: `Attachment URLs (for tool use):\n${attachmentText}`,
+            });
           }
-          return part;
-        });
+        }
       }
-    }
+    });
 
     const { longitude, latitude, city, country } = geolocation(request);
 
@@ -227,11 +224,15 @@ export async function POST(request: Request) {
     };
 
     if (message?.role === "user") {
+      const normalizedMsgId = isValidUUID(message.id)
+        ? message.id
+        : generateStableUUID(message.id);
+
       await saveMessages({
         messages: [
           {
-            chatId: id,
-            id: message.id,
+            chatId: chatUUID,
+            id: normalizedMsgId,
             role: "user",
             parts: message.parts,
             attachments: message.attachments ?? [],
@@ -257,7 +258,7 @@ export async function POST(request: Request) {
           system: systemPrompt({
             requestHints,
             supportsTools,
-            userRole: session?.user?.role,
+            userRole: session?.user?.role || "user",
             userName: session?.user?.name,
             userEmail: session?.user?.email,
           }),
@@ -276,6 +277,7 @@ export async function POST(request: Request) {
                   "readUrl",
                   "readPdf",
                   "productLookup",
+                  "saveProduct",
                   "customerLookup",
                   "orderLookup",
                   "billingLookup",
@@ -287,6 +289,7 @@ export async function POST(request: Request) {
                   "documentSearch",
                   "getSystemInfo",
                   "manageUserMemory",
+                  "requestProductUpload",
                 ],
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
@@ -318,41 +321,46 @@ export async function POST(request: Request) {
               modelId: chatModel,
             }),
             productLookup: getProductLookup(
-              session.user.id,
+              userUUID,
               session.user.role || "user",
               session.user.email ?? undefined,
             ),
+            saveProduct: getSaveProductTool(
+              userUUID,
+              session.user.email ?? undefined,
+            ),
             customerLookup: getCustomerLookup(
-              session.user.id,
+              userUUID,
               session.user.role || "user",
               session.user.email ?? undefined,
             ),
             orderLookup: getOrderLookup(
-              session.user.id,
+              userUUID,
               session.user.role || "user",
               session.user.email ?? undefined,
             ),
             billingLookup: getBillingLookup(
-              session.user.id,
+              userUUID,
               session.user.role || "user",
               session.user.email ?? undefined,
             ),
             cashBookLookup: getCashBookLookup(
-              session.user.id,
+              userUUID,
               session.user.role || "user",
               session.user.email ?? undefined,
             ),
             knowledgeBaseLookup,
-            saveKnowledge: saveKnowledge(session.user.id),
+            saveKnowledge: saveKnowledge(userUUID),
             syncFirestoreToSupabase,
-            searchChatHistory: getChatHistorySearch(session.user.id),
-            documentSearch: getDocumentSearch(session.user.id),
+            searchChatHistory: getChatHistorySearch(userUUID),
+            documentSearch: getDocumentSearch(userUUID),
             getSystemInfo: getSystemInfo(),
-            manageUserMemory: getManageUserMemory(session.user.id),
+            manageUserMemory: getManageUserMemory(userUUID),
             getDatabaseDiagnostics: getDatabaseDiagnostics(),
+            requestProductUpload: requestProductUploadTool,
           },
           experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
+            isEnabled: process.env.NODE_ENV === "production",
             functionId: "stream-text",
           },
         });
@@ -364,7 +372,7 @@ export async function POST(request: Request) {
         if (titlePromise) {
           const title = await titlePromise;
           dataStream.write({ type: "data-chat-title", data: title });
-          updateChatTitleById({ chatId: id, title });
+          updateChatTitleById({ chatId: chatUUID, title });
         }
       },
       generateId: generateUUID,
@@ -374,19 +382,20 @@ export async function POST(request: Request) {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
             if (existingMsg) {
               await updateMessage({
-                id: finishedMsg.id,
+                id: isValidUUID(finishedMsg.id) ? finishedMsg.id : generateStableUUID(finishedMsg.id),
                 parts: finishedMsg.parts,
               });
             } else {
+              const messageId = isValidUUID(finishedMsg.id) ? finishedMsg.id : generateStableUUID(finishedMsg.id);
               await saveMessages({
                 messages: [
                   {
-                    id: finishedMsg.id,
+                    id: messageId,
                     role: finishedMsg.role,
                     parts: finishedMsg.parts,
                     createdAt: new Date(),
                     attachments: [],
-                    chatId: id,
+                    chatId: chatUUID,
                   },
                 ],
               });
@@ -394,14 +403,17 @@ export async function POST(request: Request) {
           }
         } else if (finishedMessages.length > 0) {
           await saveMessages({
-            messages: finishedMessages.map((currentMessage) => ({
-              id: currentMessage.id,
-              role: currentMessage.role,
-              parts: currentMessage.parts,
-              createdAt: new Date(),
-              attachments: currentMessage.attachments ?? [],
-              chatId: id,
-            })),
+            messages: finishedMessages.map((currentMessage) => {
+              const messageId = isValidUUID(currentMessage.id) ? currentMessage.id : generateStableUUID(currentMessage.id);
+              return {
+                id: messageId,
+                role: currentMessage.role,
+                parts: currentMessage.parts,
+                createdAt: new Date(),
+                attachments: currentMessage.attachments ?? [],
+                chatId: chatUUID,
+              };
+            }),
           });
         }
       },
@@ -427,8 +439,8 @@ export async function POST(request: Request) {
         try {
           const streamContext = getStreamContext();
           if (streamContext) {
-            const streamId = generateId();
-            await createStreamId({ streamId, chatId: id });
+            const streamId = generateUUID();
+            await createStreamId({ streamId, chatId: chatUUID });
             await streamContext.createNewResumableStream(
               streamId,
               () => sseStream,

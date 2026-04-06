@@ -159,7 +159,7 @@ const getHighlighter = (
 const createRawTokens = (code: string): TokenizedCode => ({
   bg: "transparent",
   fg: "inherit",
-  tokens: code.split("\n").map((line) =>
+  tokens: (code ?? "").split("\n").map((line) =>
     line === ""
       ? []
       : [
@@ -377,11 +377,11 @@ export const CodeBlockActions = ({
 );
 
 export const CodeBlockContent = ({
-  code,
+  code = "",
   language,
   showLineNumbers = false,
 }: {
-  code: string;
+  code?: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
 }) => {
@@ -419,7 +419,7 @@ export const CodeBlockContent = ({
 };
 
 export const CodeBlock = ({
-  code,
+  code = "",
   language,
   showLineNumbers = false,
   className,

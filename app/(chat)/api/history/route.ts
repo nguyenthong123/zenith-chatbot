@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
+import { generateStableUUID, isValidUUID } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -26,9 +27,11 @@ export async function GET(request: NextRequest) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
+  const userUUID = isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id);
+
   try {
     const chats = await getChatsByUserId({
-      id: session.user.id,
+      id: userUUID,
       limit,
       startingAfter,
       endingBefore,
@@ -52,7 +55,9 @@ export async function DELETE() {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const result = await deleteAllChatsByUserId({ userId: session.user.id });
+  const userUUID = isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id);
+
+  const result = await deleteAllChatsByUserId({ userId: userUUID });
 
   return Response.json(result, { status: 200 });
 }

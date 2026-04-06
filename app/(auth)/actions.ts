@@ -29,14 +29,22 @@ export const login = async (
 
     // Authenticate with Supabase Auth
     const supabase = await createSupabaseServerClient();
-    const { error: supabaseError } = await supabase.auth.signInWithPassword({
-      email: validatedData.email,
-      password: validatedData.password,
-    });
+    const { data: supabaseData, error: supabaseError } =
+      await supabase.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
 
-    if (supabaseError) {
+    if (supabaseError || !supabaseData?.user) {
       return { status: "failed" };
     }
+
+    // Ensure local DB is in sync
+    await ensureLocalUserSync(
+      validatedData.email,
+      validatedData.password,
+      supabaseData.user.id,
+    );
 
     // Also sign in with NextAuth to maintain app session
     await signIn("credentials", {

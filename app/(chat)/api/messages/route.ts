@@ -1,6 +1,7 @@
 import { auth } from "@/app/(auth)/auth";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
+import { generateStableUUID, isValidUUID } from "@/lib/utils";
 import { convertToUIMessages } from "@/lib/utils";
 
 export async function GET(request: Request) {
@@ -12,10 +13,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    const chatUUID = isValidUUID(chatId) ? chatId : generateStableUUID(chatId);
     const [session, chat, messages] = await Promise.all([
       auth(),
-      getChatById({ id: chatId }),
-      getMessagesByChatId({ id: chatId }),
+      getChatById({ id: chatUUID }),
+      getMessagesByChatId({ id: chatUUID }),
     ]);
 
     if (!chat) {
@@ -27,14 +29,16 @@ export async function GET(request: Request) {
       });
     }
 
+    const userUUID = session?.user?.id ? (isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id)) : null;
+
     if (
       chat.visibility === "private" &&
-      (!session?.user || session.user.id !== chat.userId)
+      (!userUUID || userUUID !== chat.userId)
     ) {
       return Response.json({ error: "forbidden" }, { status: 403 });
     }
 
-    const isReadonly = !session?.user || session.user.id !== chat.userId;
+    const isReadonly = !userUUID || userUUID !== chat.userId;
 
     return Response.json({
       messages: convertToUIMessages(messages),
