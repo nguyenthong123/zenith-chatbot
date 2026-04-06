@@ -17,7 +17,7 @@ END $$;--> statement-breakpoint
 
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Stream' AND column_name='content') THEN
-        ALTER TABLE "Stream" ADD COLUMN "content" text NOT NULL DEFAULT '';
+        ALTER TABLE "Stream" ADD COLUMN "content" text DEFAULT '' NOT NULL;
     END IF;
 END $$;--> statement-breakpoint
 
