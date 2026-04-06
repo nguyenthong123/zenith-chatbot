@@ -22,7 +22,6 @@ async function checkAuthUsers() {
       _guests++;
     } else {
       real++;
-      if (real < 5) 
     }
   });
 }

@@ -27,7 +27,6 @@ async function analyzeUsers() {
       _guests++;
     } else if (email) {
       realEmails++;
-      if (realEmails < 5) 
     } else {
       _emptyEmails++;
     }
