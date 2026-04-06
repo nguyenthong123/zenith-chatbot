@@ -17,11 +17,16 @@ const processedMessageIds = new Set<string>();
 
 const log = (_msg: string) => {};
 
+interface ZaloMessage {
+  role: string;
+  content: string | Array<{ type: string; text?: string }>;
+}
+
 /**
  * Ensures message history alternates roles and handles multi-modal parts.
  */
-function sanitizeHistory(messages: any[]) {
-  const result: any[] = [];
+function sanitizeHistory(messages: ZaloMessage[]) {
+  const result: ZaloMessage[] = [];
   for (const msg of messages) {
     const role = msg.role === "assistant" ? "assistant" : "user";
     if (result.length > 0 && result[result.length - 1].role === role) {
@@ -40,7 +45,27 @@ function sanitizeHistory(messages: any[]) {
   return result;
 }
 
-async function processZaloEvent(body: any, _secretFromHeader: string | null) {
+interface ZaloEventBody {
+  message?: {
+    text?: string;
+    photo_url?: string;
+    attachments?: Array<{
+      type: string;
+      payload?: { url?: string };
+      url?: string;
+    }>;
+    message_id?: string;
+    msg_id?: string;
+    from?: { id: string };
+  };
+  event_name?: string;
+  sender?: { id: string };
+}
+
+async function processZaloEvent(
+  body: ZaloEventBody,
+  _secretFromHeader: string | null,
+) {
   const { message, event_name } = body;
   log(`[Event] Received event_name: ${event_name}`);
 
@@ -81,7 +106,7 @@ async function processZaloEvent(body: any, _secretFromHeader: string | null) {
     let photoUrl = message.photo_url;
     if (!photoUrl && message.attachments && message.attachments.length > 0) {
       const imgAttachment = message.attachments.find(
-        (att: any) => att.type === "image" || att.type === "photo",
+        (att) => att.type === "image" || att.type === "photo",
       );
       if (imgAttachment) {
         photoUrl = imgAttachment.payload?.url || imgAttachment.url;
@@ -145,7 +170,9 @@ async function processZaloEvent(body: any, _secretFromHeader: string | null) {
     const apiChatId = generateStableUUID(chatId);
     const history = await getMessagesByChatId({ id: apiChatId });
 
-    const parts: any[] = [];
+    const parts: Array<
+      { type: "text"; text: string } | { type: "image"; image: string }
+    > = [];
     if (text) parts.push({ type: "text", text });
     if (photoUrl) {
       parts.push({ type: "image", image: photoUrl });
@@ -187,7 +214,14 @@ async function processZaloEvent(body: any, _secretFromHeader: string | null) {
     log(`[AI] Processing AI response for ${user.email}...`);
 
     const aiHistory = history.slice(-10).map((m) => {
-      const formattedParts = (m.parts as any[]).map((p: any) => {
+      const formattedParts = (
+        m.parts as Array<{
+          type?: string;
+          text?: string;
+          image?: string;
+          url?: string;
+        }>
+      ).map((p) => {
         if (p.type === "image" || p.image)
           return { type: "image", image: p.image || p.url };
         return { type: "text", text: p.text || "" };
@@ -236,8 +270,10 @@ async function processZaloEvent(body: any, _secretFromHeader: string | null) {
     log(`[Zalo] Sending AI reply to user...`);
     const sent = await zaloClient.sendText(chatId, result.text);
     log(`[Zalo] Result: ${JSON.stringify(sent)}`);
-  } catch (error: any) {
-    log(`FATAL ERROR in processZaloEvent: ${error.message}\n${error.stack}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : "";
+    log(`FATAL ERROR in processZaloEvent: ${message}\n${stack}`);
   }
 }
 
@@ -267,8 +303,9 @@ export async function POST(request: NextRequest) {
     await processZaloEvent(body, secretFromHeader);
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    log(`Critical setup error in POST: ${e.message}`);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    log(`Critical setup error in POST: ${message}`);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

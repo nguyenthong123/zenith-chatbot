@@ -28,7 +28,9 @@ export const getChatHistorySearch = (userId: string) =>
             chatTitle: r.chatTitle,
             chatId: r.chatId,
             role: r.role,
-            content: (r.parts as any)[0]?.text || "No text content",
+            content:
+              (r.parts as Array<{ text?: string }>)[0]?.text ||
+              "No text content",
             createdAt: r.createdAt,
           })),
         };

@@ -55,7 +55,7 @@ export class ZaloClient {
     if (refreshKey) {
       try {
         return await this.refreshAccessToken(refreshKey);
-      } catch (_error: any) {}
+      } catch (_error: unknown) {}
     }
 
     // Final fallback
@@ -157,12 +157,17 @@ export class ZaloClient {
       }
 
       return result;
-    } catch (err: any) {
-      return { error: -1, message: err.message };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { error: -1, message };
     }
   }
 
-  private async post(url: string, data: any, token: string) {
+  private async post(
+    url: string,
+    data: Record<string, unknown>,
+    token: string,
+  ) {
     const response = await fetch(url, {
       method: "POST",
       headers: {

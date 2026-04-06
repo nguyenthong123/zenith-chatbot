@@ -19,7 +19,7 @@ import {
 // Helper to get Firestore instance lazily
 function getFirestore() {
   if (!admin.apps.length) {
-    let serviceAccount: any;
+    let serviceAccount: Record<string, unknown> | undefined;
     const envServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
 
     if (envServiceAccount) {

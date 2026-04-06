@@ -3,7 +3,11 @@ import postgres from "postgres";
 
 dotenv.config();
 
-const sql = postgres(process.env.DIRECT_URL!);
+const directUrl = process.env.DIRECT_URL;
+if (!directUrl) {
+  process.exit(1);
+}
+const sql = postgres(directUrl);
 
 async function checkColumns() {
   const _columns = await sql`
@@ -15,4 +19,5 @@ async function checkColumns() {
   process.exit(0);
 }
 
+// biome-ignore lint/suspicious/noConsole: script entry point
 checkColumns().catch(console.error);

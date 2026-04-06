@@ -15,7 +15,7 @@ export interface HeadlessChatOptions {
   userRole?: string;
   userName?: string | null;
   userEmail?: string | null;
-  messages: any[];
+  messages: Array<Record<string, unknown>>;
   selectedChatModel?: string;
   onToolCall?: (toolNames: string[]) => void | Promise<void>;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Loader2, UploadCloud, X } from "lucide-react";
+import Image from "next/image";
 import type React from "react";
 import { useRef, useState } from "react";
 import { handleInteractiveProductUpload } from "@/app/(chat)/actions";
@@ -179,11 +180,12 @@ export function ProductUploadForm() {
               key={preview}
               className="relative group rounded-md border overflow-hidden h-20 w-20 flex-shrink-0 bg-muted"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={preview}
                 alt="preview"
-                className="object-cover w-full h-full"
+                className="object-cover"
+                fill
+                unoptimized
               />
               <button
                 type="button"

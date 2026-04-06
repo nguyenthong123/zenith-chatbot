@@ -1,7 +1,11 @@
 import "dotenv/config";
 import postgres from "postgres";
 
-const sql = postgres(process.env.DIRECT_URL!);
+const directUrl = process.env.DIRECT_URL;
+if (!directUrl) {
+  process.exit(1);
+}
+const sql = postgres(directUrl);
 
 async function main() {
   try {

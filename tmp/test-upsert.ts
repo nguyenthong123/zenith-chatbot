@@ -47,4 +47,5 @@ async function test() {
     );
 }
 
+// biome-ignore lint/suspicious/noConsole: script entry point
 test().catch(console.error);

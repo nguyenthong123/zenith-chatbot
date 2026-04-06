@@ -117,8 +117,9 @@ export async function handleInteractiveProductUpload(formData: FormData) {
       } else {
         uploadErrors.push(`(Hình ${i + 1}) Thiếu Cloudinary Config.`);
       }
-    } catch (err: any) {
-      uploadErrors.push(`(Hình ${i + 1}) ${err.message || "Lỗi Cloudinary"}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Lỗi Cloudinary";
+      uploadErrors.push(`(Hình ${i + 1}) ${message}`);
     }
   }
 
@@ -140,7 +141,8 @@ export async function handleInteractiveProductUpload(formData: FormData) {
       sku,
     });
     return { success: true, product };
-  } catch (error: any) {
-    return { success: false, message: `Lỗi lưu Database: ${error.message}` };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, message: `Lỗi lưu Database: ${message}` };
   }
 }

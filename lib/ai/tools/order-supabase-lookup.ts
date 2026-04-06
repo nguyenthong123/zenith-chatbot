@@ -124,6 +124,7 @@ export const getOrderSupabaseLookup = (
           })),
         };
       } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: error logging in tool execution
         console.error("Order Supabase lookup failed:", error);
         return {
           error: "Không thể truy vấn đơn hàng từ Supabase.",

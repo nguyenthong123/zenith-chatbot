@@ -19,7 +19,7 @@ const runMigrate = async () => {
   const _start = Date.now();
   try {
     await migrate(db, { migrationsFolder: "./lib/db/migrations" });
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Postgres error codes that indicate the migration has already been
     // (fully or partially) applied and can be safely ignored:
     //   42P07 – relation already exists  (CREATE TABLE)
@@ -34,7 +34,12 @@ const runMigrate = async () => {
       "42710",
       "3F000",
     ]);
-    if (!idempotentCodes.has(err.code)) {
+    const code =
+      err instanceof Error && "code" in err
+        ? (err as Error & { code: string }).code
+        : undefined;
+    if (!code || !idempotentCodes.has(code)) {
+      // biome-ignore lint/suspicious/noConsole: migration script requires console for error reporting before process.exit
       console.error(err);
       process.exit(1);
     }
@@ -45,6 +50,7 @@ const runMigrate = async () => {
 };
 
 runMigrate().catch((err) => {
+  // biome-ignore lint/suspicious/noConsole: migration script requires console for error reporting before process.exit
   console.error(err);
   process.exit(1);
 });

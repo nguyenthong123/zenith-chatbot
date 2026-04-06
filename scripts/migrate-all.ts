@@ -39,7 +39,11 @@ function _isGuest(email?: string): boolean {
 
 async function migrateCollection(
   collectionName: string,
-  transform: (id: string, data: any) => any,
+  transform: (
+    id: string,
+    data: Record<string, unknown>,
+  ) => Record<string, unknown>,
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic Drizzle table reference
   table: any,
 ) {
   const snapshot = await firestore.collection(collectionName).get();
@@ -58,20 +62,25 @@ async function migrateCollection(
           .values(records)
           .onConflictDoUpdate({
             target: table.id || table.email || table.firestoreId,
-            set: Object.keys(records[0]).reduce((acc: any, key) => {
-              // Proper identifier quoting for PG
-              acc[key] = sql.raw(`excluded."${key}"`);
-              return acc;
-            }, {}),
+            set: Object.keys(records[0]).reduce(
+              (acc: Record<string, unknown>, key) => {
+                // Proper identifier quoting for PG
+                acc[key] = sql.raw(`excluded."${key}"`);
+                return acc;
+              },
+              {},
+            ),
           });
       }
     } catch (_err) {}
   }
 }
 
-function toTimestamp(val: any) {
+function toTimestamp(val: unknown) {
   if (!val) return new Date();
-  if (val.toDate) return val.toDate();
+  if (typeof val === "object" && val !== null && "toDate" in val) {
+    return (val as { toDate: () => Date }).toDate();
+  }
   if (typeof val === "string") return new Date(val);
   return new Date();
 }
@@ -80,8 +89,8 @@ async function startMigration() {
   const userSnapshot = await firestore.collection("users").get();
   const customerSnapshot = await firestore.collection("customers").get();
 
-  const allUsersMap = new Map<string, any>();
-  const guests: any[] = [];
+  const allUsersMap = new Map<string, Record<string, unknown>>();
+  const guests: Record<string, unknown>[] = [];
 
   // From users collection
   for (const doc of userSnapshot.docs) {
@@ -158,7 +167,7 @@ async function startMigration() {
       .values(guests.map((g) => ({ ...g, id: undefined })))
       .onConflictDoNothing();
   }
-  const realCustomers: any[] = [];
+  const realCustomers: Record<string, unknown>[] = [];
 
   for (const doc of customerSnapshot.docs) {
     const data = doc.data();

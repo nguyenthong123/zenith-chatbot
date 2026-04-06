@@ -23,6 +23,27 @@ import { ProductGallery } from "./product-gallery";
 import { ProductUploadForm } from "./product-upload-form";
 import { Weather } from "./weather";
 
+interface ProductToolOutput {
+  message?: string;
+  imageUrls?: string[];
+  products?: Array<{
+    id?: string;
+    name?: string;
+    sku?: string;
+    category?: string;
+    imageUrls?: string[];
+    note?: string;
+  }>;
+}
+
+interface DynamicToolPart {
+  toolCallId: string;
+  state: string;
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  args?: Record<string, unknown>;
+}
+
 const PurePreviewMessage = ({
   addToolApprovalResponse,
   chatId,
@@ -273,7 +294,7 @@ const PurePreviewMessage = ({
       const widthClass = "w-[min(100%,450px)]";
 
       if (state === "output-available") {
-        const output = part.output as any;
+        const output = part.output as ProductToolOutput;
 
         return (
           <div className={widthClass} key={toolCallId}>
@@ -305,7 +326,7 @@ const PurePreviewMessage = ({
                   {type === "tool-productLookup" &&
                     output.products?.length > 0 && (
                       <div className="space-y-6">
-                        {output.products.map((p: any, pIdx: number) => (
+                        {output.products.map((p, pIdx) => (
                           <div
                             key={p.id || pIdx}
                             className="space-y-2 border-b border-border/50 pb-4 last:border-0 last:pb-0"
@@ -363,7 +384,7 @@ const PurePreviewMessage = ({
               type="dynamic-tool"
             />
             <ToolContent>
-              <ToolInput input={part.input || (part as any).args} />
+              <ToolInput input={part.input || (part as DynamicToolPart).args} />
             </ToolContent>
           </Tool>
         </div>
@@ -382,7 +403,7 @@ const PurePreviewMessage = ({
           <ToolHeader state={state} type="tool-requestSuggestions" />
           <ToolContent>
             {state === "input-available" && (
-              <ToolInput input={part.input || (part as any).args} />
+              <ToolInput input={part.input || (part as DynamicToolPart).args} />
             )}
             {state === "output-available" && (
               <ToolOutput
@@ -426,7 +447,7 @@ const PurePreviewMessage = ({
       type === "tool-readUrl" ||
       type === "tool-readPdf"
     ) {
-      const toolPart = part as any;
+      const toolPart = part as DynamicToolPart;
       const { toolCallId, state } = toolPart;
       const toolName = type.split("-").slice(1).join("-");
 
@@ -439,7 +460,7 @@ const PurePreviewMessage = ({
                 <ToolOutput errorText={undefined} output={toolPart.output} />
               )}
               {(state === "input-available" || state === "input-streaming") && (
-                <ToolInput input={toolPart.input || (toolPart as any).args} />
+                <ToolInput input={toolPart.input || toolPart.args} />
               )}
             </ToolContent>
           </Tool>

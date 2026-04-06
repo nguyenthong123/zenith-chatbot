@@ -3,7 +3,11 @@ import postgres from "postgres";
 
 dotenv.config();
 
-const sql = postgres(process.env.DIRECT_URL!);
+const directUrl = process.env.DIRECT_URL;
+if (!directUrl) {
+  process.exit(1);
+}
+const sql = postgres(directUrl);
 
 async function resetDb() {
   await sql`DROP SCHEMA public CASCADE;`;
