@@ -6,8 +6,9 @@ import { getBillingLookup } from "@/lib/ai/tools/billing-lookup";
 import { getCashBookLookup } from "@/lib/ai/tools/cash-book-lookup";
 import { getCustomerLookup } from "@/lib/ai/tools/customer-lookup";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
+import { getOrderSupabaseLookup } from "@/lib/ai/tools/order-supabase-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
-import { getSaveProductTool } from "@/lib/ai/tools/save-product";
+import { getUserLookup } from "@/lib/ai/tools/user-lookup";
 
 export interface HeadlessChatOptions {
   userId: string;
@@ -57,6 +58,8 @@ export async function generateHeadlessResponse({
         userEmail || undefined,
       ),
       orderLookup: getOrderLookup(userId, userRole),
+      orderSupabaseLookup: getOrderSupabaseLookup(userId, userRole, userEmail),
+      userLookup: getUserLookup(userId, userRole, userEmail),
       billingLookup: getBillingLookup(userId, userRole),
       cashBookLookup: getCashBookLookup(userId, userRole),
     },
