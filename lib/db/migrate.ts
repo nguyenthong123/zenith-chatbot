@@ -13,7 +13,10 @@ const runMigrate = async () => {
     process.exit(0);
   }
 
-  const connection = postgres(dbUrl, { max: 1 });
+  const connection = postgres(dbUrl, {
+    max: 1,
+    onnotice: () => {},
+  });
   const db = drizzle(connection);
 
   const _start = Date.now();
@@ -22,12 +25,14 @@ const runMigrate = async () => {
   } catch (err: any) {
     // Postgres error codes that indicate the migration has already been
     // (fully or partially) applied and can be safely ignored:
+    //   42P06 – duplicate_schema         (CREATE SCHEMA)
     //   42P07 – relation already exists  (CREATE TABLE)
     //   42701 – duplicate_column         (ADD COLUMN)
     //   42704 – undefined_object         (DROP CONSTRAINT / DROP INDEX on missing object)
     //   42710 – duplicate_object         (ADD CONSTRAINT / CREATE INDEX on existing object)
     //   3F000 – invalid_schema_name
     const idempotentCodes = new Set([
+      "42P06",
       "42P07",
       "42701",
       "42704",
