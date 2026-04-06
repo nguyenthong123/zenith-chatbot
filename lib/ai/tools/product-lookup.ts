@@ -54,12 +54,13 @@ export const getProductLookup = (
             eq(product.ownerEmail, userEmail ?? ""),
           ),
         );
-        plConditions.push(
-          or(
-            eq(priceList.ownerId, userId),
-            eq(priceList.ownerEmail, userEmail ?? ""),
-          )!,
+        const plOwnerCondition = or(
+          eq(priceList.ownerId, userId),
+          eq(priceList.ownerEmail, userEmail ?? ""),
         );
+        if (plOwnerCondition) {
+          plConditions.push(plOwnerCondition);
+        }
 
         // 1. Search in products table
         const products = await db

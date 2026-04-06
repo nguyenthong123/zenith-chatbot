@@ -829,7 +829,9 @@ export async function searchKnowledgeBase(query?: string) {
     const combined = [
       ...kbResults.map((r) => ({
         content: r.content,
-        title: (r.metadata as any)?.title || "General Knowledge",
+        title:
+          (r.metadata as Record<string, string> | null)?.title ||
+          "General Knowledge",
         source: "knowledge_base",
         createdAt: r.createdAt,
       })),
@@ -856,7 +858,7 @@ export async function saveKnowledgeBaseItem({
 }: {
   content: string;
   userId?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }) {
   try {
     return await db

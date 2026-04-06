@@ -4,8 +4,10 @@
  */
 
 if (typeof globalThis !== "undefined") {
-  if (!(globalThis as any).DOMMatrix) {
-    (globalThis as any).DOMMatrix = class DOMMatrix {
+  const g = globalThis as Record<string, unknown>;
+  if (!g.DOMMatrix) {
+    // biome-ignore lint/complexity/noStaticOnlyClass: polyfill must mimic browser DOMMatrix class interface
+    g.DOMMatrix = class DOMMatrix {
       static fromMatrix() {
         return new DOMMatrix();
       }
@@ -18,8 +20,8 @@ if (typeof globalThis !== "undefined") {
     };
   }
 
-  if (!(globalThis as any).Path2D) {
-    (globalThis as any).Path2D = class Path2D {
+  if (!g.Path2D) {
+    g.Path2D = class Path2D {
       addPath() {}
       closePath() {}
       moveTo() {}
@@ -33,8 +35,8 @@ if (typeof globalThis !== "undefined") {
     };
   }
 
-  if (!(globalThis as any).ImageData) {
-    (globalThis as any).ImageData = class ImageData {
+  if (!g.ImageData) {
+    g.ImageData = class ImageData {
       width: number;
       height: number;
       data: Uint8ClampedArray;

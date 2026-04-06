@@ -47,12 +47,19 @@ export const webSearch = tool({
         query: data.query,
         answer: data.answer,
         results:
-          data.results?.map((source: any) => ({
-            title: source.title,
-            url: source.url,
-            content: source.content,
-            score: source.score,
-          })) ?? [],
+          data.results?.map(
+            (source: {
+              title?: string;
+              url?: string;
+              content?: string;
+              score?: number;
+            }) => ({
+              title: source.title,
+              url: source.url,
+              content: source.content,
+              score: source.score,
+            }),
+          ) ?? [],
       };
     } catch (error) {
       return {

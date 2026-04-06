@@ -85,6 +85,7 @@ export const getUserLookup = (
           })),
         };
       } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: error logging in tool execution
         console.error("User lookup failed:", error);
         return {
           error: "Không thể truy vấn thông tin người dùng.",

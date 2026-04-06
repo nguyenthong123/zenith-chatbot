@@ -5,6 +5,7 @@ import type { Suggestion } from "@/lib/db/schema";
 import type { ChatMessage, CustomUIDataTypes } from "@/lib/types";
 import type { UIArtifact } from "./artifact";
 
+// biome-ignore lint/suspicious/noExplicitAny: generic type defaults require any for flexibility
 export type ArtifactActionContext<M = any> = {
   content: string;
   handleVersionChange: (type: "next" | "prev" | "toggle" | "latest") => void;
@@ -15,6 +16,7 @@ export type ArtifactActionContext<M = any> = {
   setMetadata: Dispatch<SetStateAction<M>>;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: generic type defaults require any for flexibility
 type ArtifactAction<M = any> = {
   icon: ReactNode;
   label?: string;
@@ -33,6 +35,7 @@ export type ArtifactToolbarItem = {
   onClick: (context: ArtifactToolbarContext) => void;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: generic type defaults require any for flexibility
 type ArtifactContent<M = any> = {
   title: string;
   content: string;
@@ -49,11 +52,13 @@ type ArtifactContent<M = any> = {
   setMetadata: Dispatch<SetStateAction<M>>;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: generic type defaults require any for flexibility
 type InitializeParameters<M = any> = {
   documentId: string;
   setMetadata: Dispatch<SetStateAction<M>>;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: generic type defaults require any for flexibility
 type ArtifactConfig<T extends string, M = any> = {
   kind: T;
   description: string;
@@ -68,6 +73,7 @@ type ArtifactConfig<T extends string, M = any> = {
   }) => void;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: generic type defaults require any for flexibility
 export class Artifact<T extends string, M = any> {
   readonly kind: T;
   readonly description: string;

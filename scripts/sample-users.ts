@@ -18,4 +18,5 @@ async function sampleUsers() {
   snapshot.forEach((_doc) => {});
 }
 
+// biome-ignore lint/suspicious/noConsole: script entry point
 sampleUsers().catch(console.error);
