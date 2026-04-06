@@ -41,6 +41,7 @@ import { getSaveProductTool } from "@/lib/ai/tools/save-product";
 import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
 import { getSystemInfo } from "@/lib/ai/tools/system-info";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { getManageUserMemory } from "@/lib/ai/tools/user-memory";
 import { getUserLookup } from "@/lib/ai/tools/user-lookup";
 import { webSearch } from "@/lib/ai/tools/web-search";
 import {
