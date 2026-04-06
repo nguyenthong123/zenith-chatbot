@@ -49,7 +49,6 @@ export async function GET(request: Request) {
     if (error instanceof ChatbotError) {
       return error.toResponse();
     }
-    console.error("Unhandled error in api/vote GET:", error);
     return new ChatbotError("bad_request:api").toResponse();
   }
 }
@@ -100,7 +99,6 @@ export async function PATCH(request: Request) {
     if (error instanceof ChatbotError) {
       return error.toResponse();
     }
-    console.error("Unhandled error in api/vote PATCH:", error);
     return new ChatbotError("bad_request:api").toResponse();
   }
 }

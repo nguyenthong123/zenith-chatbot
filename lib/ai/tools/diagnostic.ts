@@ -2,11 +2,6 @@ import { tool } from "ai";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
-import {
-  document as documentTable,
-  knowledgeBase as knowledgeBaseTable,
-  message as messageTable,
-} from "@/lib/db/schema";
 
 export const getDatabaseDiagnostics = () =>
   tool({
@@ -21,8 +16,7 @@ export const getDatabaseDiagnostics = () =>
               sql.raw(`SELECT count(*) FROM "${tableName}"`),
             );
             return Number(result[0]?.count || 0);
-          } catch (e) {
-            console.error(`Diagnostic error counting ${tableName}:`, e);
+          } catch (_e) {
             return -1; // -1 indicates error for this specific table
           }
         };

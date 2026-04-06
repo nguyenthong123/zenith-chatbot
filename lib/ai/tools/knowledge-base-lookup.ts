@@ -30,7 +30,6 @@ export const knowledgeBaseLookup = tool({
         message: `Found ${results.length} related articles in the Supabase knowledge base and documents.`,
       };
     } catch (error) {
-      console.error("Knowledge base lookup failed:", error);
       return {
         error: "Failed to search the knowledge base.",
         message: error instanceof Error ? error.message : String(error),

@@ -31,7 +31,7 @@ if (!admin.apps.length) {
 const firestore = admin.firestore();
 const userMap = new Map<string, string>(); // firestoreId -> supabaseId (uuid)
 
-function isGuest(email?: string): boolean {
+function _isGuest(email?: string): boolean {
   if (!email) return true;
   const e = email.toLowerCase();
   return e.startsWith("guest-") || e.endsWith("@example.com");
@@ -42,9 +42,7 @@ async function migrateCollection(
   transform: (id: string, data: any) => any,
   table: any,
 ) {
-  console.log(`Migrating ${collectionName}...`);
   const snapshot = await firestore.collection(collectionName).get();
-  console.log(`Found ${snapshot.size} documents in ${collectionName}`);
 
   const batchSize = 100;
   const docs = snapshot.docs;
@@ -67,9 +65,7 @@ async function migrateCollection(
             }, {}),
           });
       }
-    } catch (err) {
-      console.error(`Error migrating chunk of ${collectionName}:`, err);
-    }
+    } catch (_err) {}
   }
 }
 
@@ -81,8 +77,6 @@ function toTimestamp(val: any) {
 }
 
 async function startMigration() {
-  // 1. All Users (Admins + Customers as Users)
-  console.log("Migrating all users...");
   const userSnapshot = await firestore.collection("users").get();
   const customerSnapshot = await firestore.collection("customers").get();
 
@@ -135,7 +129,6 @@ async function startMigration() {
 
   const userRecords = Array.from(allUsersMap.values());
   if (userRecords.length > 0) {
-    console.log(`Syncing ${userRecords.length} users to users table...`);
     for (let i = 0; i < userRecords.length; i += 100) {
       const chunk = userRecords.slice(i, i + 100);
       const inserted = await db
@@ -160,15 +153,11 @@ async function startMigration() {
   }
 
   if (guests.length > 0) {
-    console.log(`Inserting ${guests.length} guests into guest_users...`);
     await db
       .insert(guestUserTable)
       .values(guests.map((g) => ({ ...g, id: undefined })))
       .onConflictDoNothing();
   }
-
-  // 2. Customers
-  console.log("Migrating customers collection...");
   const realCustomers: any[] = [];
 
   for (const doc of customerSnapshot.docs) {
@@ -193,9 +182,6 @@ async function startMigration() {
   }
 
   if (realCustomers.length > 0) {
-    console.log(
-      `Syncing ${realCustomers.length} customers to customers table...`,
-    );
     for (let i = 0; i < realCustomers.length; i += 100) {
       const chunk = realCustomers.slice(i, i + 100);
       await db
@@ -310,12 +296,9 @@ async function startMigration() {
     }),
     systemConfigTable,
   );
-
-  console.log("Migration finished!");
   process.exit(0);
 }
 
-startMigration().catch((err) => {
-  console.error("Migration failed:", err);
+startMigration().catch((_err) => {
   process.exit(1);
 });

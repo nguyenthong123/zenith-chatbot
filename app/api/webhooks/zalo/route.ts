@@ -15,9 +15,7 @@ import { zaloClient } from "@/lib/zalo/client";
 // In-memory set to prevent processing the same message twice (deduplication)
 const processedMessageIds = new Set<string>();
 
-const log = (msg: string) => {
-  console.log(`[ZaloWebhook] ${msg}`);
-};
+const log = (_msg: string) => {};
 
 /**
  * Ensures message history alternates roles and handles multi-modal parts.
@@ -42,7 +40,7 @@ function sanitizeHistory(messages: any[]) {
   return result;
 }
 
-async function processZaloEvent(body: any, secretFromHeader: string | null) {
+async function processZaloEvent(body: any, _secretFromHeader: string | null) {
   const { message, event_name } = body;
   log(`[Event] Received event_name: ${event_name}`);
 
@@ -243,11 +241,11 @@ async function processZaloEvent(body: any, secretFromHeader: string | null) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   return NextResponse.json({ status: "ok", service: "Zalo Webhook" });
 }
 
-export async function HEAD(request: NextRequest) {
+export async function HEAD(_request: NextRequest) {
   return new NextResponse(null, { status: 200 });
 }
 

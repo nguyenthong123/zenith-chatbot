@@ -4,7 +4,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  generateId,
   stepCountIs,
   streamText,
 } from "ai";
@@ -32,24 +31,23 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { knowledgeBaseLookup } from "@/lib/ai/tools/knowledge-base-lookup";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
-import { getSaveProductTool } from "@/lib/ai/tools/save-product";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
+import { requestProductUploadTool } from "@/lib/ai/tools/request-product-upload";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { saveKnowledge } from "@/lib/ai/tools/save-knowledge";
+import { getSaveProductTool } from "@/lib/ai/tools/save-product";
 import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
 import { getSystemInfo } from "@/lib/ai/tools/system-info";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { getManageUserMemory } from "@/lib/ai/tools/user-memory";
 import { webSearch } from "@/lib/ai/tools/web-search";
-import { requestProductUploadTool } from "@/lib/ai/tools/request-product-upload";
 import {
   createStreamId,
   deleteChatById,
   getChatById,
   getMessagesByChatId,
   getOrCreateUser,
-  getUserById,
   saveChat,
   saveMessages,
   updateChatTitleById,
@@ -86,8 +84,7 @@ export async function POST(request: Request) {
     let parsedBody: PostRequestBody;
     try {
       parsedBody = postRequestBodySchema.parse(body);
-    } catch (error) {
-      console.error("Zod Validation Error:", error);
+    } catch (_error) {
       return new ChatbotError("bad_request:api").toResponse();
     }
 
@@ -103,7 +100,9 @@ export async function POST(request: Request) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 
-    const userUUID = isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id);
+    const userUUID = isValidUUID(session.user.id)
+      ? session.user.id
+      : generateStableUUID(session.user.id);
     const chatUUID = isValidUUID(id) ? id : generateStableUUID(id);
 
     const chatModel = allowedModelIds.has(selectedChatModel)
@@ -179,7 +178,11 @@ export async function POST(request: Request) {
 
     // Inject attachment URLs into messages
     uiMessages.forEach((msg) => {
-      if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
+      if (
+        msg.role === "user" &&
+        msg.attachments &&
+        msg.attachments.length > 0
+      ) {
         const toolRelevantAttachments = msg.attachments.filter(
           (a) =>
             a.contentType?.includes("pdf") ||
@@ -382,11 +385,15 @@ export async function POST(request: Request) {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
             if (existingMsg) {
               await updateMessage({
-                id: isValidUUID(finishedMsg.id) ? finishedMsg.id : generateStableUUID(finishedMsg.id),
+                id: isValidUUID(finishedMsg.id)
+                  ? finishedMsg.id
+                  : generateStableUUID(finishedMsg.id),
                 parts: finishedMsg.parts,
               });
             } else {
-              const messageId = isValidUUID(finishedMsg.id) ? finishedMsg.id : generateStableUUID(finishedMsg.id);
+              const messageId = isValidUUID(finishedMsg.id)
+                ? finishedMsg.id
+                : generateStableUUID(finishedMsg.id);
               await saveMessages({
                 messages: [
                   {
@@ -404,7 +411,9 @@ export async function POST(request: Request) {
         } else if (finishedMessages.length > 0) {
           await saveMessages({
             messages: finishedMessages.map((currentMessage) => {
-              const messageId = isValidUUID(currentMessage.id) ? currentMessage.id : generateStableUUID(currentMessage.id);
+              const messageId = isValidUUID(currentMessage.id)
+                ? currentMessage.id
+                : generateStableUUID(currentMessage.id);
               return {
                 id: messageId,
                 role: currentMessage.role,

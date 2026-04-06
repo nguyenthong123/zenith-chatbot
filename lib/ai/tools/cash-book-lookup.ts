@@ -6,7 +6,7 @@ import { type CashBook, cashBook } from "@/lib/db/schema";
 
 export const getCashBookLookup = (
   userId: string,
-  userRole: string,
+  _userRole: string,
   userEmail?: string,
 ) =>
   tool({

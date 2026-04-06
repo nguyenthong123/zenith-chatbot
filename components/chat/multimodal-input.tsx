@@ -386,7 +386,7 @@ function PureMultimodalInput({
         </div>
       )}
 
-      {(!editingMessage && !isLoading) && (
+      {!editingMessage && !isLoading && (
         <SuggestedActions
           chatId={chatId}
           selectedVisibilityType={selectedVisibilityType}

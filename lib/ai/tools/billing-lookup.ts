@@ -6,7 +6,7 @@ import { order, type Payment, payment } from "@/lib/db/schema";
 
 export const getBillingLookup = (
   userId: string,
-  userRole: string,
+  _userRole: string,
   userEmail?: string,
 ) =>
   tool({

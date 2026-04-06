@@ -1,49 +1,50 @@
-import { upsertProduct, getProductLookup } from './lib/db/queries';
-import { db } from './lib/db';
-import { products } from './lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { and, eq } from "drizzle-orm";
+import { db } from "./lib/db";
+import { upsertProduct } from "./lib/db/queries";
+import { products } from "./lib/db/schema";
 
 async function test() {
-  const testUserId = 'test-user-uuid';
-  const productName = 'Test Product ABC';
-  
-  console.log('--- Step 1: Saving product with first image ---');
+  const testUserId = "test-user-uuid";
+  const productName = "Test Product ABC";
   await upsertProduct({
     name: productName,
     ownerId: testUserId,
-    imageUrls: ['http://example.com/img1.jpg'],
-    sku: 'SKU-001',
-    description: 'First version'
+    imageUrls: ["http://example.com/img1.jpg"],
+    sku: "SKU-001",
+    description: "First version",
   });
-  
-  let p = await db.query.products.findFirst({
-    where: and(eq(products.name, productName), eq(products.ownerId, testUserId))
-  });
-  console.log('Product after step 1:', JSON.stringify(p, null, 2));
 
-  console.log('\n--- Step 2: Saving same product name with second image ---');
+  let p = await db.query.products.findFirst({
+    where: and(
+      eq(products.name, productName),
+      eq(products.ownerId, testUserId),
+    ),
+  });
   await upsertProduct({
     name: productName,
     ownerId: testUserId,
-    imageUrls: ['http://example.com/img2.jpg'],
-    sku: 'SKU-001-UPDATED',
-    description: 'Second version'
+    imageUrls: ["http://example.com/img2.jpg"],
+    sku: "SKU-001-UPDATED",
+    description: "Second version",
   });
 
   p = await db.query.products.findFirst({
-    where: and(eq(products.name, productName), eq(products.ownerId, testUserId))
+    where: and(
+      eq(products.name, productName),
+      eq(products.ownerId, testUserId),
+    ),
   });
-  console.log('Product after step 2:', JSON.stringify(p, null, 2));
-  
+
   if (p?.imageUrls?.length === 2) {
-    console.log('\nSUCCESS: Images were appended!');
   } else {
-    console.log('\nFAILURE: Images were NOT appended correctly.');
   }
 
   // Cleanup
-  await db.delete(products).where(and(eq(products.name, productName), eq(products.ownerId, testUserId)));
-  console.log('\nCleanup done.');
+  await db
+    .delete(products)
+    .where(
+      and(eq(products.name, productName), eq(products.ownerId, testUserId)),
+    );
 }
 
 test().catch(console.error);

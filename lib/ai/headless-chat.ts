@@ -51,7 +51,11 @@ export async function generateHeadlessResponse({
     tools: {
       productLookup: getProductLookup(userId, userRole, userEmail || undefined),
       saveProduct: getSaveProductTool(userId, userEmail || undefined),
-      customerLookup: getCustomerLookup(userId, userRole, userEmail || undefined),
+      customerLookup: getCustomerLookup(
+        userId,
+        userRole,
+        userEmail || undefined,
+      ),
       orderLookup: getOrderLookup(userId, userRole),
       billingLookup: getBillingLookup(userId, userRole),
       cashBookLookup: getCashBookLookup(userId, userRole),

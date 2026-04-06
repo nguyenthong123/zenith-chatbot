@@ -4,7 +4,6 @@ import {
   doublePrecision,
   foreignKey,
   index,
-  integer,
   json,
   numeric,
   pgTable,

@@ -1,8 +1,8 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { tool } from "ai";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import * as admin from "firebase-admin";
-import * as fs from "fs";
-import * as path from "path";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import {
@@ -25,12 +25,7 @@ function getFirestore() {
     if (envServiceAccount) {
       try {
         serviceAccount = JSON.parse(envServiceAccount);
-      } catch (err) {
-        console.error(
-          "Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable:",
-          err,
-        );
-      }
+      } catch (_err) {}
     }
 
     if (!serviceAccount) {
@@ -315,12 +310,7 @@ export const syncFirestoreToSupabase = tool({
                 });
             }
             count++;
-          } catch (err) {
-            console.error(
-              `[Migration Tool] Failed to sync record ${id} in ${col}:`,
-              err,
-            );
-          }
+          } catch (_err) {}
         }
         results[col] = count;
       }

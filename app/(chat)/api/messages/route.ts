@@ -1,8 +1,11 @@
 import { auth } from "@/app/(auth)/auth";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
-import { generateStableUUID, isValidUUID } from "@/lib/utils";
-import { convertToUIMessages } from "@/lib/utils";
+import {
+  convertToUIMessages,
+  generateStableUUID,
+  isValidUUID,
+} from "@/lib/utils";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -29,7 +32,11 @@ export async function GET(request: Request) {
       });
     }
 
-    const userUUID = session?.user?.id ? (isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id)) : null;
+    const userUUID = session?.user?.id
+      ? isValidUUID(session.user.id)
+        ? session.user.id
+        : generateStableUUID(session.user.id)
+      : null;
 
     if (
       chat.visibility === "private" &&
@@ -50,8 +57,6 @@ export async function GET(request: Request) {
     if (error instanceof ChatbotError) {
       return error.toResponse();
     }
-
-    console.error("Unhandled error in api/messages:", error);
     return new ChatbotError("bad_request:api").toResponse();
   }
 }

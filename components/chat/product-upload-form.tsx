@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { UploadCloud, X, Loader2, CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2, UploadCloud, X } from "lucide-react";
+import type React from "react";
+import { useRef, useState } from "react";
 import { handleInteractiveProductUpload } from "@/app/(chat)/actions";
 
 export function ProductUploadForm() {
@@ -25,7 +26,7 @@ export function ProductUploadForm() {
 
     setFiles((prev) => [...prev, ...validImageFiles]);
     const newPreviews = validImageFiles.map((file) =>
-      URL.createObjectURL(file)
+      URL.createObjectURL(file),
     );
     setPreviews((prev) => [...prev, ...newPreviews]);
   };
@@ -67,7 +68,7 @@ export function ProductUploadForm() {
 
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
-    
+
     if (!name.trim()) {
       setErrorMsg("Vui lòng nhập tên sản phẩm.");
       return;
@@ -75,10 +76,12 @@ export function ProductUploadForm() {
 
     setIsUploading(true);
     try {
-      // Due to Vercel Server Actions occasionally struggling with raw File objects inside FormData over certain limits, 
+      // Due to Vercel Server Actions occasionally struggling with raw File objects inside FormData over certain limits,
       // we'll convert images to base64 and append them.
-      const base64Images = await Promise.all(files.map(f => encodeFileToBase64(f)));
-      base64Images.forEach(b64 => formData.append("imagesBase64", b64));
+      const base64Images = await Promise.all(
+        files.map((f) => encodeFileToBase64(f)),
+      );
+      base64Images.forEach((b64) => formData.append("imagesBase64", b64));
 
       const result = await handleInteractiveProductUpload(formData);
       if (result.success) {
@@ -89,7 +92,6 @@ export function ProductUploadForm() {
         setErrorMsg(result.message || "Lỗi khi lưu sản phẩm.");
       }
     } catch (err: any) {
-      console.error(err);
       setErrorMsg(err.message || "Đã xảy ra lỗi không xác định.");
     } finally {
       setIsUploading(false);
@@ -101,8 +103,10 @@ export function ProductUploadForm() {
       <div className="rounded-xl border border-border bg-card p-6 text-center text-card-foreground shadow-sm max-w-md w-full my-4">
         <CheckCircle2 className="mx-auto h-12 w-12 text-green-500 mb-3" />
         <h3 className="text-lg font-semibold">Tải lên thành công!</h3>
-        <p className="text-sm text-muted-foreground mt-1">Sản phẩm đã được lưu an toàn vào cơ sở dữ liệu và Cloudinary.</p>
-        <button 
+        <p className="text-sm text-muted-foreground mt-1">
+          Sản phẩm đã được lưu an toàn vào cơ sở dữ liệu và Cloudinary.
+        </p>
+        <button
           onClick={() => setSuccess(false)}
           className="mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80"
         >
@@ -113,10 +117,17 @@ export function ProductUploadForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm max-w-[500px] w-full my-4 flex flex-col gap-5">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm max-w-[500px] w-full my-4 flex flex-col gap-5"
+    >
       <div>
-        <h3 className="text-base font-semibold leading-none mb-1">Thêm sản phẩm mới</h3>
-        <p className="text-sm text-muted-foreground">Tải ảnh trực tiếp lên kho và tự động trích xuất link.</p>
+        <h3 className="text-base font-semibold leading-none mb-1">
+          Thêm sản phẩm mới
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Tải ảnh trực tiếp lên kho và tự động trích xuất link.
+        </p>
       </div>
 
       <div
@@ -125,13 +136,18 @@ export function ProductUploadForm() {
             ? "border-primary bg-primary/5"
             : "border-muted-foreground/25 hover:border-primary/50"
         }`}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
       >
         <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
         <p className="text-sm font-medium">Kéo thả ảnh vào đây</p>
-        <p className="text-xs text-muted-foreground mb-4">hoặc nhấn để duyệt file (JPG, PNG)</p>
+        <p className="text-xs text-muted-foreground mb-4">
+          hoặc nhấn để duyệt file (JPG, PNG)
+        </p>
         <button
           type="button"
           disabled={isUploading}
@@ -153,9 +169,16 @@ export function ProductUploadForm() {
       {previews.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {previews.map((preview, idx) => (
-            <div key={idx} className="relative group rounded-md border overflow-hidden h-20 w-20 flex-shrink-0 bg-muted">
+            <div
+              key={idx}
+              className="relative group rounded-md border overflow-hidden h-20 w-20 flex-shrink-0 bg-muted"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview} alt="preview" className="object-cover w-full h-full" />
+              <img
+                src={preview}
+                alt="preview"
+                className="object-cover w-full h-full"
+              />
               <button
                 type="button"
                 onClick={() => removeFile(idx)}
@@ -171,7 +194,9 @@ export function ProductUploadForm() {
 
       <div className="space-y-3">
         <div className="space-y-1">
-          <label htmlFor="name" className="text-sm font-medium text-foreground">Tên sản phẩm *</label>
+          <label htmlFor="name" className="text-sm font-medium text-foreground">
+            Tên sản phẩm *
+          </label>
           <input
             autoComplete="off"
             id="name"
@@ -183,7 +208,12 @@ export function ProductUploadForm() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label htmlFor="sku" className="text-sm font-medium text-foreground">Mã (SKU)</label>
+            <label
+              htmlFor="sku"
+              className="text-sm font-medium text-foreground"
+            >
+              Mã (SKU)
+            </label>
             <input
               autoComplete="off"
               id="sku"
@@ -194,7 +224,12 @@ export function ProductUploadForm() {
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="category" className="text-sm font-medium text-foreground">Danh mục</label>
+            <label
+              htmlFor="category"
+              className="text-sm font-medium text-foreground"
+            >
+              Danh mục
+            </label>
             <input
               autoComplete="off"
               id="category"
@@ -206,7 +241,9 @@ export function ProductUploadForm() {
           </div>
         </div>
         <div className="space-y-1">
-          <label htmlFor="note" className="text-sm font-medium text-foreground">Ghi chú</label>
+          <label htmlFor="note" className="text-sm font-medium text-foreground">
+            Ghi chú
+          </label>
           <textarea
             id="note"
             name="note"
@@ -217,7 +254,9 @@ export function ProductUploadForm() {
         </div>
       </div>
 
-      {errorMsg && <p className="text-sm font-medium text-destructive">{errorMsg}</p>}
+      {errorMsg && (
+        <p className="text-sm font-medium text-destructive">{errorMsg}</p>
+      )}
 
       <button
         type="submit"

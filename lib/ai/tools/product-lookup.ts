@@ -25,22 +25,27 @@ export const getProductLookup = (
     execute: async ({ query }) => {
       try {
         // Standardize common terms (e.g. "ly" to "mm" in Vietnamese context)
-        const normalizedQuery = query.toLowerCase().replace(/\s+ly\b/g, 'mm');
-        
+        const normalizedQuery = query.toLowerCase().replace(/\s+ly\b/g, "mm");
+
         // Split into keywords to allow partial/out-of-order matches
-        const keywords = normalizedQuery.split(/\s+/).filter(k => k.length > 0);
-        
+        const keywords = normalizedQuery
+          .split(/\s+/)
+          .filter((k) => k.length > 0);
+
         // Build keyword conditions (all keywords must be present in either name, category, or sku)
-        const keywordConditions = keywords.map(kw => 
+        const keywordConditions = keywords.map((kw) =>
           or(
             ilike(product.name, `%${kw}%`),
             ilike(product.category, `%${kw}%`),
-            ilike(product.sku, `%${kw}%`)
-          )
+            ilike(product.sku, `%${kw}%`),
+          ),
         );
 
-        const conditions = keywordConditions.length > 0 ? [...keywordConditions] : [];
-        const plConditions = keywords.map(kw => ilike(priceList.title, `%${kw}%`));
+        const conditions =
+          keywordConditions.length > 0 ? [...keywordConditions] : [];
+        const plConditions = keywords.map((kw) =>
+          ilike(priceList.title, `%${kw}%`),
+        );
 
         // Mandatory account isolation by email/ID
         conditions.push(

@@ -8,7 +8,7 @@ export const requestProductUploadTool = tool({
     intentMatched: z
       .boolean()
       .describe(
-        "True if you believe the user clearly wants the product upload interface."
+        "True if you believe the user clearly wants the product upload interface.",
       ),
   }),
   execute: async ({ intentMatched }) => {

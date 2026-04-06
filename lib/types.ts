@@ -3,13 +3,13 @@ import { z } from "zod";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { createDocument } from "./ai/tools/create-document";
 import type { getWeather } from "./ai/tools/get-weather";
+import type { getProductLookup } from "./ai/tools/product-lookup";
 import type { readPdf } from "./ai/tools/read-pdf";
 import type { readUrl } from "./ai/tools/read-url";
-import type { requestSuggestions } from "./ai/tools/request-suggestions";
-import type { updateDocument } from "./ai/tools/update-document";
-import type { getProductLookup } from "./ai/tools/product-lookup";
-import type { getSaveProductTool } from "./ai/tools/save-product";
 import type { requestProductUploadTool } from "./ai/tools/request-product-upload";
+import type { requestSuggestions } from "./ai/tools/request-suggestions";
+import type { getSaveProductTool } from "./ai/tools/save-product";
+import type { updateDocument } from "./ai/tools/update-document";
 import type { Suggestion } from "./db/schema";
 
 export const messageMetadataSchema = z.object({
@@ -28,7 +28,9 @@ type readUrlTool = InferUITool<typeof readUrl>;
 type readPdfTool = InferUITool<typeof readPdf>;
 type productLookupTool = InferUITool<ReturnType<typeof getProductLookup>>;
 type saveProductTool = InferUITool<ReturnType<typeof getSaveProductTool>>;
-type requestProductUploadToolType = InferUITool<typeof requestProductUploadTool>;
+type requestProductUploadToolType = InferUITool<
+  typeof requestProductUploadTool
+>;
 
 export type ChatTools = {
   getWeather: weatherTool;

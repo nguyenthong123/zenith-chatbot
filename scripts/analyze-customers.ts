@@ -15,19 +15,17 @@ const firestore = admin.firestore();
 
 async function analyzeCustomers() {
   const snapshot = await firestore.collection("customers").get();
-  console.log(`Total customers: ${snapshot.size}`);
 
-  let withEmail = 0;
+  let _withEmail = 0;
   snapshot.forEach((doc) => {
     if (
       doc.data().email ||
       doc.data().ownerEmail ||
       doc.data().createdByEmail
     ) {
-      withEmail++;
+      _withEmail++;
     }
   });
-  console.log(`Customers with any email field: ${withEmail}`);
 }
 
 analyzeCustomers().catch(console.error);

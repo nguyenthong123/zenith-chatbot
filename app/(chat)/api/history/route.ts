@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const userUUID = isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id);
+  const userUUID = isValidUUID(session.user.id)
+    ? session.user.id
+    : generateStableUUID(session.user.id);
 
   try {
     const chats = await getChatsByUserId({
@@ -42,8 +44,6 @@ export async function GET(request: NextRequest) {
     if (error instanceof ChatbotError) {
       return error.toResponse();
     }
-
-    console.error("Unhandle error in api/history:", error);
     return new ChatbotError("bad_request:history").toResponse();
   }
 }
@@ -55,7 +55,9 @@ export async function DELETE() {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const userUUID = isValidUUID(session.user.id) ? session.user.id : generateStableUUID(session.user.id);
+  const userUUID = isValidUUID(session.user.id)
+    ? session.user.id
+    : generateStableUUID(session.user.id);
 
   const result = await deleteAllChatsByUserId({ userId: userUUID });
 

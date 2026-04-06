@@ -7,6 +7,7 @@ import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { titleModel } from "@/lib/ai/models";
 import { titlePrompt } from "@/lib/ai/prompts";
 import { getTitleModel } from "@/lib/ai/providers";
+import cloudinary from "@/lib/cloudinary";
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getChatById,
@@ -14,7 +15,6 @@ import {
   updateChatVisibilityById,
   upsertProduct,
 } from "@/lib/db/queries";
-import cloudinary from "@/lib/cloudinary";
 import { getTextFromMessage } from "@/lib/utils";
 
 export async function saveChatModelAsCookie(model: string) {
@@ -96,11 +96,14 @@ export async function handleInteractiveProductUpload(formData: FormData) {
   const imagesBase64 = formData.getAll("imagesBase64") as string[];
 
   if (!name || imagesBase64.length === 0) {
-    return { success: false, message: "Thiếu dữ liệu bắt buộc (Tên hoặc Hình ảnh)." };
+    return {
+      success: false,
+      message: "Thiếu dữ liệu bắt buộc (Tên hoặc Hình ảnh).",
+    };
   }
 
-  let finalImageUrls: string[] = [];
-  let uploadErrors: string[] = [];
+  const finalImageUrls: string[] = [];
+  const uploadErrors: string[] = [];
 
   for (let i = 0; i < imagesBase64.length; i++) {
     const base64 = imagesBase64[i];
@@ -115,7 +118,6 @@ export async function handleInteractiveProductUpload(formData: FormData) {
         uploadErrors.push(`(Hình ${i + 1}) Thiếu Cloudinary Config.`);
       }
     } catch (err: any) {
-      console.error(`[Upload Error] Ảnh ${i}:`, err);
       uploadErrors.push(`(Hình ${i + 1}) ${err.message || "Lỗi Cloudinary"}`);
     }
   }
@@ -123,7 +125,7 @@ export async function handleInteractiveProductUpload(formData: FormData) {
   if (finalImageUrls.length === 0) {
     return {
       success: false,
-      message: "Tất cả file ảnh đều không thể tải lên kho lưu trữ. " + uploadErrors.join(", "),
+      message: `Tất cả file ảnh đều không thể tải lên kho lưu trữ. ${uploadErrors.join(", ")}`,
     };
   }
 
@@ -137,10 +139,8 @@ export async function handleInteractiveProductUpload(formData: FormData) {
       category,
       sku,
     });
-    console.log("[handleInteractiveProductUpload] Success", product);
     return { success: true, product };
   } catch (error: any) {
-    console.error("[handleInteractiveProductUpload] DB Error", error);
-    return { success: false, message: "Lỗi lưu Database: " + error.message };
+    return { success: false, message: `Lỗi lưu Database: ${error.message}` };
   }
 }

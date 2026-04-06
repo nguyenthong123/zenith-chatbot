@@ -15,28 +15,23 @@ const firestore = admin.firestore();
 
 async function analyzeUsers() {
   const snapshot = await firestore.collection("users").get();
-  const total = snapshot.size;
-  let guests = 0;
+  const _total = snapshot.size;
+  let _guests = 0;
   let realEmails = 0;
-  let emptyEmails = 0;
+  let _emptyEmails = 0;
 
   snapshot.forEach((doc) => {
     const data = doc.data();
     const email = data.email || "";
     if (email.startsWith("guest-") || email.endsWith("@example.com")) {
-      guests++;
+      _guests++;
     } else if (email) {
       realEmails++;
-      if (realEmails < 5) console.log(`Real Email: ${email}`);
+      if (realEmails < 5) 
     } else {
-      emptyEmails++;
+      _emptyEmails++;
     }
   });
-
-  console.log(`Total: ${total}`);
-  console.log(`Guests: ${guests}`);
-  console.log(`Real Emails: ${realEmails}`);
-  console.log(`Empty Emails: ${emptyEmails}`);
 }
 
 analyzeUsers().catch(console.error);

@@ -6,7 +6,7 @@ import { type Customer, customer } from "@/lib/db/schema";
 
 export const getCustomerLookup = (
   userId: string,
-  userRole: string,
+  _userRole: string,
   userEmail?: string,
 ) =>
   tool({
@@ -53,7 +53,6 @@ export const getCustomerLookup = (
           })),
         };
       } catch (error) {
-        console.error("Customer lookup failed:", error);
         return {
           error: "Failed to search for customers.",
           message: error instanceof Error ? error.message : String(error),

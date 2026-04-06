@@ -10,9 +10,6 @@ config({
 const runMigrate = async () => {
   const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (!dbUrl) {
-    console.log(
-      "No connection string found (DATABASE_URL or POSTGRES_URL). Skipping migration.",
-    );
     process.exit(0);
   }
 
@@ -38,21 +35,15 @@ const runMigrate = async () => {
       "3F000",
     ]);
     if (idempotentCodes.has(err.code)) {
-      console.log(
-        `Migration notice: Encountered code ${err.code} (${err.message ?? ""}). Schema is likely up-to-date. Continuing build...`,
-      );
     } else {
-      console.error("Migration failed with error:", err);
       process.exit(1);
     }
   }
   await connection.end();
   const _end = Date.now();
-  console.log(`Migration finished in ${_end - _start}ms`);
   process.exit(0);
 };
 
-runMigrate().catch((err) => {
-  console.error("Migration failed:", err);
+runMigrate().catch((_err) => {
   process.exit(1);
 });
