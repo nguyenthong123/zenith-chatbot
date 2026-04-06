@@ -182,7 +182,7 @@ export function ProductUploadForm() {
             >
               <Image
                 src={preview}
-                alt="preview"
+                alt={`Product image preview ${idx + 1}`}
                 className="object-cover"
                 fill
                 unoptimized
