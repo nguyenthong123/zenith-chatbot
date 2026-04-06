@@ -13,7 +13,7 @@ const runMigrate = async () => {
     process.exit(0);
   }
 
-  const connection = postgres(dbUrl, { max: 1 });
+  const connection = postgres(dbUrl, { max: 1, onnotice: () => {} });
   const db = drizzle(connection);
 
   const _start = Date.now();
@@ -34,8 +34,8 @@ const runMigrate = async () => {
       "42710",
       "3F000",
     ]);
-    if (idempotentCodes.has(err.code)) {
-    } else {
+    if (!idempotentCodes.has(err.code)) {
+      console.error(err);
       process.exit(1);
     }
   }
@@ -44,6 +44,7 @@ const runMigrate = async () => {
   process.exit(0);
 };
 
-runMigrate().catch((_err) => {
+runMigrate().catch((err) => {
+  console.error(err);
   process.exit(1);
 });
