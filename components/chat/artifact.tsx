@@ -298,7 +298,7 @@ function PureArtifact({
   }
 
   const consoleError =
-    metadata?.outputs
+    (metadata?.outputs as any[])
       ?.filter((o: { status: string }) => o.status === "failed")
       .flatMap((o: { contents: { type: string; value: string }[] }) =>
         o.contents.filter((c) => c.type === "text").map((c) => c.value),
@@ -370,10 +370,10 @@ function PureArtifact({
           isCurrentVersion={isCurrentVersion}
           isInline={false}
           isLoading={isDocumentsFetching && !artifact.content}
-          metadata={metadata}
+          metadata={metadata as any}
           mode={mode}
           onSaveContent={saveContent}
-          setMetadata={setMetadata}
+          setMetadata={setMetadata as any}
           status={artifact.status}
           suggestions={[]}
           title={artifact.title}
@@ -387,9 +387,9 @@ function PureArtifact({
                   currentVersionIndex={currentVersionIndex}
                   handleVersionChange={handleVersionChange}
                   isCurrentVersion={isCurrentVersion}
-                  metadata={metadata}
+                  metadata={metadata as any}
                   mode={mode}
-                  setMetadata={setMetadata}
+                  setMetadata={setMetadata as any}
                 />
               }
               artifactKind={artifact.kind}

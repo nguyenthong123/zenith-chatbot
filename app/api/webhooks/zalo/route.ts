@@ -19,7 +19,7 @@ const log = (_msg: string) => {};
 
 interface ZaloMessage {
   role: string;
-  content: string | Array<{ type: string; text?: string }>;
+  content: any;
 }
 
 /**
@@ -77,15 +77,14 @@ async function processZaloEvent(
   try {
     // 1. ID Extraction (Zalo OA stores ID in sender.id or from.id)
     const fromId = body.sender?.id || message.from?.id;
-    const chatId = fromId; // For Zalo OA, the recipient ID for responses is the sender's ID
-    const text = (message.text || "").trim();
-
-    log(`[IDs] extracted fromId: ${fromId}, text: ${text}`);
-
     if (!fromId) {
       log("Error: Could not extract sender ID from Zalo event body");
       return;
     }
+    const chatId = fromId as string;
+    const text = (message.text || "").trim();
+
+    log(`[IDs] extracted fromId: ${fromId}, text: ${text}`);
 
     // 2. Deduplication
     const messageId = message.message_id || message.msg_id;
@@ -140,7 +139,7 @@ async function processZaloEvent(
           await updateUserZaloId(targetUser.id, fromId);
 
           await zaloClient.sendText(
-            chatId,
+            chatId!,
             "✅ Đã kết nối tài khoản thành công! Bây giờ bạn có thể chat với trợ lý Zenith.",
           );
           return;
@@ -150,7 +149,7 @@ async function processZaloEvent(
           `[Link] Email '${trimmedText}' is not registered in our 'users' table.`,
         );
         await zaloClient.sendText(
-          chatId,
+          chatId!,
           `❌ Không tìm thấy tài khoản với email: ${trimmedText}. Vui lòng đăng ký tài khoản trên website trước khi kết nối.`,
         );
         return;
@@ -158,7 +157,7 @@ async function processZaloEvent(
 
       log(`[Link] Prompting user for email registration.`);
       await zaloClient.sendText(
-        chatId,
+        chatId!,
         "Chào bạn! Tôi là trợ lý Zenith. Vui lòng nhập Email đã đăng ký trên hệ thống để kết nối và bắt đầu trò chuyện.",
       );
       return;
@@ -240,11 +239,11 @@ async function processZaloEvent(
       userRole: user.role ?? "user",
       userName: user.displayName || user.name,
       userEmail: user.email,
-      messages: aiMessages,
+      messages: aiMessages as any,
       onToolCall: async () => {
         if (!hasSentIndicator) {
           await zaloClient.sendText(
-            chatId,
+            chatId!,
             "🔍 Đang tra cứu dữ liệu, vui lòng chờ trong giây lát...",
           );
           hasSentIndicator = true;
@@ -268,7 +267,7 @@ async function processZaloEvent(
     });
 
     log(`[Zalo] Sending AI reply to user...`);
-    const sent = await zaloClient.sendText(chatId, result.text);
+    const sent = await zaloClient.sendText(chatId!, result.text);
     log(`[Zalo] Result: ${JSON.stringify(sent)}`);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);

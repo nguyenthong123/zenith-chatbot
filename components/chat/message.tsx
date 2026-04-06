@@ -318,15 +318,15 @@ const PurePreviewMessage = ({
 
                   {/* Render saved images gallery */}
                   {type === "tool-saveProduct" &&
-                    output.imageUrls?.length > 0 && (
-                      <ProductGallery images={output.imageUrls} />
+                    (output.imageUrls?.length ?? 0) > 0 && (
+                      <ProductGallery images={output.imageUrls as string[]} />
                     )}
 
                   {/* Render looked up products */}
                   {type === "tool-productLookup" &&
-                    output.products?.length > 0 && (
+                    (output.products?.length ?? 0) > 0 && (
                       <div className="space-y-6">
-                        {output.products.map((p, pIdx) => (
+                        {output.products!.map((p, pIdx) => (
                           <div
                             key={p.id || pIdx}
                             className="space-y-2 border-b border-border/50 pb-4 last:border-0 last:pb-0"
@@ -344,7 +344,7 @@ const PurePreviewMessage = ({
                                 {p.category}
                               </p>
                             )}
-                            {p.imageUrls?.length > 0 && (
+                            {p.imageUrls && p.imageUrls.length > 0 && (
                               <ProductGallery
                                 images={p.imageUrls}
                                 productName={p.name}
@@ -454,7 +454,11 @@ const PurePreviewMessage = ({
       return (
         <div className="w-[min(100%,450px)]" key={toolCallId}>
           <Tool className="w-full" defaultOpen={state === "output-available"}>
-            <ToolHeader state={state} toolName={toolName} type="dynamic-tool" />
+            <ToolHeader
+              state={state as any}
+              toolName={toolName}
+              type="dynamic-tool"
+            />
             <ToolContent>
               {state === "output-available" && (
                 <ToolOutput errorText={undefined} output={toolPart.output} />

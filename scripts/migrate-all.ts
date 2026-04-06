@@ -59,7 +59,7 @@ async function migrateCollection(
       if (records.length > 0) {
         await db
           .insert(table)
-          .values(records)
+          .values(records as any)
           .onConflictDoUpdate({
             target: table.id || table.email || table.firestoreId,
             set: Object.keys(records[0]).reduce(
@@ -142,7 +142,7 @@ async function startMigration() {
       const chunk = userRecords.slice(i, i + 100);
       const inserted = await db
         .insert(userTable)
-        .values(chunk)
+        .values(chunk as any)
         .onConflictDoUpdate({
           target: userTable.email,
           set: {
@@ -195,7 +195,7 @@ async function startMigration() {
       const chunk = realCustomers.slice(i, i + 100);
       await db
         .insert(customerTable)
-        .values(chunk)
+        .values(chunk as any)
         .onConflictDoUpdate({
           target: customerTable.id,
           set: {
@@ -226,7 +226,7 @@ async function startMigration() {
       imageUrl: data.imageUrl,
       status: data.status,
       specification: data.specification,
-      ownerId: userMap.get(data.ownerId),
+      ownerId: userMap.get(data.ownerId as string),
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
     }),
@@ -245,7 +245,7 @@ async function startMigration() {
       status: data.status,
       date: data.date,
       items: data.items || [],
-      ownerId: userMap.get(data.ownerId),
+      ownerId: userMap.get(data.ownerId as string),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
@@ -266,7 +266,7 @@ async function startMigration() {
       note: data.note,
       interestRate: String(data.interestRate || "0"),
       loanTerm: data.loanTerm,
-      ownerId: userMap.get(data.ownerId),
+      ownerId: userMap.get(data.ownerId as string),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
     }),
@@ -285,7 +285,7 @@ async function startMigration() {
       paymentMethod: data.paymentMethod,
       proofImage: data.proofImage,
       note: data.note,
-      ownerId: userMap.get(data.ownerId),
+      ownerId: userMap.get(data.ownerId as string),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
     }),

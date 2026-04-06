@@ -8,6 +8,7 @@ import { getCustomerLookup } from "@/lib/ai/tools/customer-lookup";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
 import { getOrderSupabaseLookup } from "@/lib/ai/tools/order-supabase-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
+import { getSaveProductTool } from "@/lib/ai/tools/save-product";
 import { getUserLookup } from "@/lib/ai/tools/user-lookup";
 
 export interface HeadlessChatOptions {
@@ -47,7 +48,7 @@ export async function generateHeadlessResponse({
         longitude: "0",
       },
     }),
-    messages,
+    messages: messages as any,
     stopWhen: stepCountIs(5),
     tools: {
       productLookup: getProductLookup(userId, userRole, userEmail || undefined),
