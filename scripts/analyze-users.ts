@@ -17,7 +17,7 @@ async function analyzeUsers() {
   const snapshot = await firestore.collection("users").get();
   const _total = snapshot.size;
   let _guests = 0;
-  let realEmails = 0;
+  let _realEmails = 0;
   let _emptyEmails = 0;
 
   snapshot.forEach((doc) => {
@@ -26,7 +26,7 @@ async function analyzeUsers() {
     if (email.startsWith("guest-") || email.endsWith("@example.com")) {
       _guests++;
     } else if (email) {
-      realEmails++;
+      _realEmails++;
     } else {
       _emptyEmails++;
     }

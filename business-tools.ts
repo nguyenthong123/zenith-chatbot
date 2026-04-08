@@ -75,7 +75,7 @@ export const orderLookup = tool({
     orderId: z.string().optional().describe("Mã đơn hàng"),
     customerName: z.string().optional().describe("Tên khách hàng"),
   }),
-  execute: async ({ orderId, customerName }) => {
+  execute: async ({ orderId: _orderId, customerName: _customerName }) => {
     return "Tính năng tra cứu đơn hàng đang được cập nhật dữ liệu...";
   },
 });

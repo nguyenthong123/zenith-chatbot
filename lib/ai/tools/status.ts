@@ -19,7 +19,7 @@ export const generateStatus = () =>
         return {
           status: "generated",
           category,
-          summary: text.length > 100 ? text.substring(0, 97) + "..." : text,
+          summary: text.length > 100 ? `${text.substring(0, 97)}...` : text,
           timestamp: new Date().toISOString(),
           originalText: text,
         };
