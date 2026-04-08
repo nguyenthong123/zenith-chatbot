@@ -1,7 +1,6 @@
-import { google } from "@ai-sdk/google";
+import * as path from "node:path";
 import { generateText, tool } from "ai";
 import * as dotenv from "dotenv";
-import * as path from "path";
 import { z } from "zod";
 import * as dbQueries from "../../lib/db/queries";
 import { generateStableUUID } from "../../lib/utils";

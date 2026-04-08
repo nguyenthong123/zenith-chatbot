@@ -326,7 +326,7 @@ const PurePreviewMessage = ({
                   {type === "tool-productLookup" &&
                     (output.products?.length ?? 0) > 0 && (
                       <div className="space-y-6">
-                        {output.products!.map((p, pIdx) => (
+                        {(output.products ?? []).map((p, pIdx) => (
                           <div
                             key={p.id || pIdx}
                             className="space-y-2 border-b border-border/50 pb-4 last:border-0 last:pb-0"

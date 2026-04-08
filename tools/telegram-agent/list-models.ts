@@ -1,5 +1,4 @@
 import * as path from "node:path";
-import { google } from "@ai-sdk/google";
 import dotenv from "dotenv";
 
 dotenv.config({ path: path.join(__dirname, ".env") });

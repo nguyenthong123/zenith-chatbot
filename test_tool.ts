@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 try {
-  const t = tool({
+  const _t = tool({
     description: "test",
     inputSchema: z.object({ a: z.string() }),
     execute: async () => "ok",
@@ -13,7 +13,7 @@ try {
 }
 
 try {
-  const t = (tool as any)({
+  const _t = (tool as any)({
     description: "test",
     inputSchema: z.object({ a: z.string() }),
     execute: async () => "ok",

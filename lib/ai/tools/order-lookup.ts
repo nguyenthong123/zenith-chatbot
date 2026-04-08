@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import { and, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
+import { and, eq, gte, ilike, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import { type Order, order } from "@/lib/db/schema";

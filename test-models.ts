@@ -1,7 +1,7 @@
+import * as path from "node:path";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText } from "ai";
 import * as dotenv from "dotenv";
-import * as path from "path";
 
 dotenv.config({ path: path.resolve(__dirname, "./.env") });
 

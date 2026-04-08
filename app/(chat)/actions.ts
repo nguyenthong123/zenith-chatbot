@@ -85,7 +85,7 @@ export async function updateChatVisibility({
 
 export async function handleInteractiveProductUpload(formData: FormData) {
   const session = await auth();
-  if (!session?.user?.email) {
+  if (!session?.user?.email || !session.user.id) {
     return { success: false, message: "Bạn cần đăng nhập để thao tác!" };
   }
 
@@ -170,7 +170,7 @@ export async function handleInteractiveProductUpload(formData: FormData) {
       name,
       note: note,
       imageUrls: productimageUrls,
-      ownerId: session.user.id!,
+      ownerId: session.user.id,
       category,
       sku,
     });

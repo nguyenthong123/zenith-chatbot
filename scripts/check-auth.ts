@@ -15,13 +15,13 @@ async function checkAuthUsers() {
   const listUsersResult = await admin.auth().listUsers(1000);
 
   let _guests = 0;
-  let real = 0;
+  let _real = 0;
 
   listUsersResult.users.forEach((user) => {
     if (user.email?.startsWith("guest-") || !user.email) {
       _guests++;
     } else {
-      real++;
+      _real++;
     }
   });
 }
