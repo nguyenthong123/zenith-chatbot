@@ -1,5 +1,9 @@
 import { auth } from "@/app/(auth)/auth";
-import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
+import {
+  getChatById,
+  getMessagesByChatId,
+  getOrCreateUser,
+} from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
 import {
   convertToUIMessages,
@@ -32,11 +36,20 @@ export async function GET(request: Request) {
       });
     }
 
-    const userUUID = session?.user?.id
+    let userUUID = session?.user?.id
       ? isValidUUID(session.user.id)
         ? session.user.id
         : generateStableUUID(session.user.id)
       : null;
+
+    if (session?.user?.id) {
+      const dbUser = await getOrCreateUser({
+        id: session.user.id,
+        email: session.user.email ?? undefined,
+        name: session.user.name ?? undefined,
+      });
+      userUUID = dbUser.id;
+    }
 
     if (
       chat.visibility === "private" &&

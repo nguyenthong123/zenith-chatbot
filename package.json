@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "tsx lib/db/migrate && next build",
+    "build": "next build",
     "start": "next start",
     "check": "ultracite check",
     "fix": "ultracite fix",
@@ -17,6 +17,8 @@
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
+    "bot": "tsx telegram-bot.ts",
+    "set-webhook": "tsx scripts/set-webhook.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -117,6 +119,7 @@
     "pnpm": "^10.33.0",
     "postcss": "^8",
     "tailwindcss": "^4.1.13",
+    "telegraf": "^4.16.3",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",
     "ultracite": "^7.0.11",

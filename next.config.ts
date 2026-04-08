@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   devIndicators: false,
   poweredByHeader: false,
-  reactCompiler: true,
+  reactCompiler: false,
   logging: {
     fetches: {
       fullUrl: false,
@@ -59,7 +59,7 @@ const nextConfig: NextConfig = {
     cachedNavigations: true,
     appNewScrollHandler: true,
     inlineCss: true,
-    turbopackFileSystemCacheForDev: true,
+    turbopackFileSystemCacheForDev: false,
     serverActions: {
       bodySizeLimit: "20mb",
     },

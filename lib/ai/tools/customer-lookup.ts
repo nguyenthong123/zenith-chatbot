@@ -50,6 +50,7 @@ export const getCustomerLookup = (
         return {
           customers: customers.map((c: Customer) => ({
             ...c,
+            infoMarkdown: c.infoMarkdown,
           })),
         };
       } catch (error) {

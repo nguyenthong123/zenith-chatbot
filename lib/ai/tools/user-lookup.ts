@@ -1,6 +1,8 @@
 import { tool } from "ai";
+import { and, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/db/queries";
+import { user } from "@/lib/db/schema";
 
 export const getUserLookup = (
   _userId: string,
@@ -9,88 +11,72 @@ export const getUserLookup = (
 ) =>
   tool({
     description:
-      "Look up user account information from the users table in Supabase. Use this when the user asks about their personal info, profile, account details, or when you need to identify a user. For non-admin users, only their own record is returned (filtered by session email).",
+      "Look up user account information. Use this when the user asks about their personal info, profile, or identity. For non-admin (Guest/Regular), only their own record is returned.",
     inputSchema: z.object({
       email: z
         .string()
         .optional()
         .describe(
-          "Email of the user to look up. Leave empty to look up the current logged-in user. Admin only: search other users by email.",
+          "Email to look up. Leave empty for the current user. Admin only: search others.",
         ),
       name: z
         .string()
         .optional()
-        .describe("Search users by display name (Admin only)."),
+        .describe("Search users by name (Admin only)."),
     }),
     execute: async ({ email, name }) => {
       try {
-        const supabase = createSupabaseAdminClient();
-
-        let query = supabase
-          .from("users")
-          .select(
-            "id, email, name, displayName, photoUrl, role, emailVerified, isAnonymous, createdAt, updatedAt",
-          );
+        const conditions = [];
 
         if (userRole !== "admin") {
-          // Non-admin users can ONLY see their own data using session email
           if (!userEmail) {
             return {
-              error:
-                "Không thể xác định email người dùng. Vui lòng đăng nhập lại.",
+              error: "Bạn chưa đăng nhập hoặc không xác định được danh tính.",
             };
           }
-          // Always use session email for non-admin, ignore any provided email/name
-          query = query.eq("email", userEmail);
+          conditions.push(eq(user.email, userEmail));
         } else {
-          // Admin can search by email or name
           if (email) {
-            query = query.ilike("email", `%${email.replace(/[%_]/g, "")}%`);
+            conditions.push(ilike(user.email, `%${email}%`));
           }
           if (name) {
-            const sanitizedName = name.replace(/[%_]/g, "");
-            query = query.or(
-              `name.ilike.%${sanitizedName}%,displayName.ilike.%${sanitizedName}%`,
+            conditions.push(
+              or(
+                ilike(user.name, `%${name}%`),
+                ilike(user.displayName, `%${name}%`),
+              ),
             );
           }
         }
 
-        const { data, error } = await query.limit(10);
+        const results = await db
+          .select({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            displayName: user.displayName,
+            role: user.role,
+            isAnonymous: user.isAnonymous,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          })
+          .from(user)
+          .where(
+            conditions.length > 0 ? and(...(conditions as any[])) : undefined,
+          )
+          .limit(10);
 
-        if (error) {
-          return {
-            error: "Lỗi khi truy vấn bảng users từ Supabase.",
-            message: error.message,
-          };
-        }
-
-        if (!data || data.length === 0) {
-          return {
-            message: "Không tìm thấy người dùng nào phù hợp.",
-          };
+        if (results.length === 0) {
+          return { message: "Không tìm thấy thông tin phù hợp." };
         }
 
         return {
-          usersCount: data.length,
-          users: data.map((u) => ({
-            id: u.id,
-            email: u.email,
-            name: u.name,
-            displayName: u.displayName,
-            role: u.role,
-            emailVerified: u.emailVerified,
-            isAnonymous: u.isAnonymous,
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-          })),
+          usersCount: results.length,
+          users: results,
         };
       } catch (error) {
-        // biome-ignore lint/suspicious/noConsole: error logging in tool execution
         console.error("User lookup failed:", error);
-        return {
-          error: "Không thể truy vấn thông tin người dùng.",
-          message: error instanceof Error ? error.message : String(error),
-        };
+        return { error: "Lỗi hệ thống khi tìm kiếm người dùng." };
       }
     },
   });

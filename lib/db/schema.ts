@@ -31,16 +31,36 @@ export const user = pgTable(
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
     firestoreId: varchar("firestoreId", { length: 255 }),
-    zaloId: varchar("zaloId", { length: 255 }),
+    telegramId: varchar("telegramId", { length: 255 }),
+    telegramChatId: varchar("telegramChatId", { length: 255 }),
   },
   (table) => ({
     emailIndex: uniqueIndex("email_idx").on(table.email),
     firestoreIdIndex: uniqueIndex("firestore_id_idx").on(table.firestoreId),
-    zaloIdIndex: uniqueIndex("zalo_id_idx").on(table.zaloId),
   }),
 );
 
 export type User = typeof user.$inferSelect;
+
+export const telegramUser = pgTable(
+  "telegram_users",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    telegramId: varchar("telegramId", { length: 255 }).notNull(),
+    chatId: varchar("chatId", { length: 255 }).notNull(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    isActive: boolean("isActive").notNull().default(true),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    telegramIdIdx: index("telegram_id_idx").on(table.telegramId),
+  }),
+);
+
+export type TelegramUser = typeof telegramUser.$inferSelect;
 
 export const guestUser = pgTable("guest_users", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -200,13 +220,14 @@ export const product = pgTable(
     note: text("note"),
     expiryDate: text("expiryDate"),
     metadata: json("metadata"),
-    imageUrl: text("imageUrl"),
+    imageUrls: text("imageUrls"),
     ownerId: uuid("ownerId").references(() => user.id),
     ownerEmail: text("ownerEmail"),
     createdBy: text("createdBy"),
     createdByEmail: text("createdByEmail"),
     updatedBy: text("updatedBy"),
     updatedByEmail: text("updatedByEmail"),
+    infoMarkdown: text("infoMarkdown"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },
@@ -240,21 +261,12 @@ export const systemConfig = pgTable("system_config", {
   accountNumber: text("accountNumber"),
   bankId: text("bankId"),
   subscriptionLimit: timestamp("subscriptionLimit"),
+  infoMarkdown: text("infoMarkdown"),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   updatedBy: text("updatedBy"),
 });
 
 export type SystemConfig = typeof systemConfig.$inferSelect;
-
-export const zaloConfig = pgTable("zalo_config", {
-  id: text("id").primaryKey().notNull(),
-  accessToken: text("accessToken").notNull(),
-  refreshToken: text("refreshToken").notNull(),
-  expiresAt: timestamp("expiresAt").notNull(),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-});
-
-export type ZaloConfig = typeof zaloConfig.$inferSelect;
 
 export const customer = pgTable(
   "customers",
@@ -274,6 +286,7 @@ export const customer = pgTable(
     createdByEmail: text("createdByEmail"),
     updatedBy: text("updatedBy"),
     updatedByEmail: text("updatedByEmail"),
+    infoMarkdown: text("infoMarkdown"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
@@ -302,6 +315,7 @@ export const order = pgTable(
     createdByEmail: text("createdByEmail"),
     updatedBy: text("updatedBy"),
     updatedByEmail: text("updatedByEmail"),
+    infoMarkdown: text("infoMarkdown"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
@@ -331,6 +345,7 @@ export const cashBook = pgTable(
     createdByEmail: text("createdByEmail"),
     updatedBy: text("updatedBy"),
     updatedByEmail: text("updatedByEmail"),
+    infoMarkdown: text("infoMarkdown"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (table) => ({
@@ -358,6 +373,7 @@ export const payment = pgTable(
     createdByEmail: text("createdByEmail"),
     updatedBy: text("updatedBy"),
     updatedByEmail: text("updatedByEmail"),
+    infoMarkdown: text("infoMarkdown"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (table) => ({
@@ -367,3 +383,13 @@ export const payment = pgTable(
 );
 
 export type Payment = typeof payment.$inferSelect;
+
+export const zaloConfig = pgTable("zalo_config", {
+  id: text("id").primaryKey().notNull(),
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type ZaloConfig = typeof zaloConfig.$inferSelect;

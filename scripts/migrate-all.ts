@@ -20,7 +20,7 @@ const client = postgres(process.env.DATABASE_URL ?? "", { prepare: false });
 const db = drizzle(client);
 
 // Initialize Firebase
-const serviceAccount = require("/Users/zomby/Desktop/dunvex-89461-firebase-adminsdk-fbsvc-0dcb46d9a3.json");
+const serviceAccount = require("../config/service-account.json");
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -45,6 +45,7 @@ async function migrateCollection(
   ) => Record<string, unknown>,
   // biome-ignore lint/suspicious/noExplicitAny: dynamic Drizzle table reference
   table: any,
+  onConflictTarget?: any,
 ) {
   const snapshot = await firestore.collection(collectionName).get();
 
@@ -55,13 +56,38 @@ async function migrateCollection(
     const chunk = docs.slice(i, i + batchSize);
     const records = chunk.map((doc) => transform(doc.id, doc.data()));
 
+    // De-duplicate within the chunk to avoid "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const uniqueRecords: any[] = [];
+    const seen = new Set<string>();
+
+    // We iterate backwards to keep the latest if duplicates exist in the same chunk
+    for (let j = records.length - 1; j >= 0; j--) {
+      const rec = records[j];
+      let key = "";
+      if (Array.isArray(onConflictTarget)) {
+        key = onConflictTarget
+          .map((col) => String(rec[col.name] || ""))
+          .join("|");
+      } else {
+        const targetCol =
+          onConflictTarget || table.id || table.email || table.firestoreId;
+        key = String(rec[targetCol.name] || "");
+      }
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueRecords.push(rec);
+      }
+    }
+
     try {
-      if (records.length > 0) {
+      if (uniqueRecords.length > 0) {
         await db
           .insert(table)
-          .values(records as any)
+          .values(uniqueRecords as any)
           .onConflictDoUpdate({
-            target: table.id || table.email || table.firestoreId,
+            target:
+              onConflictTarget || table.id || table.email || table.firestoreId,
             set: Object.keys(records[0]).reduce(
               (acc: Record<string, unknown>, key) => {
                 // Proper identifier quoting for PG
@@ -71,8 +97,11 @@ async function migrateCollection(
               {},
             ),
           });
+        console.log(`Migrated ${records.length} records to ${collectionName}`);
       }
-    } catch (_err) {}
+    } catch (err) {
+      console.error(`Error migrating chunk for ${collectionName}:`, err);
+    }
   }
 }
 
@@ -187,6 +216,7 @@ async function startMigration() {
       createdByEmail: data.createdByEmail || "",
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
+      infoMarkdown: `**Khách hàng:** ${data.name || data.businessName || "Không tên"}\n**SĐT:** ${data.phone || "Không có"}\n**Địa chỉ:** ${data.address || "Không rõ"}\n**Loại:** ${data.type || "Chưa phân loại"}\n**Trạng thái:** ${data.status || ""}`,
     });
   }
 
@@ -206,6 +236,7 @@ async function startMigration() {
             status: sql`excluded.status`,
             ownerId: sql`excluded."ownerId"`,
             updatedAt: sql`excluded."updatedAt"`,
+            infoMarkdown: sql`excluded."infoMarkdown"`,
           },
         });
     }
@@ -229,8 +260,10 @@ async function startMigration() {
       ownerId: userMap.get(data.ownerId as string),
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
+      infoMarkdown: `**Sản phẩm:** ${data.name || ""}\n**Mã SKU:** ${data.sku || ""}\n**Phân loại:** ${data.category || ""}\n**Giá nhập:** ${data.priceBuy || 0}\n**Giá bán:** ${data.priceSell || 0}\n**Tồn kho:** ${data.stock || 0} ${data.unit || ""}\n**Mô tả:** ${data.specification || ""}\n**Trạng thái:** ${data.status || ""}`,
     }),
     productTable,
+    [productTable.name, productTable.ownerId],
   );
 
   // 4. Orders
@@ -249,6 +282,7 @@ async function startMigration() {
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
       updatedAt: toTimestamp(data.updatedAt),
+      infoMarkdown: `**Đơn hàng:** ${data.orderId || ""}\n**Khách hàng:** ${data.customerName || data.customerId || ""}\n**Tổng tiền:** ${data.totalAmount || 0}\n**Ngày:** ${data.date || ""}\n**Trạng thái:** ${data.status || ""}\n**Sản phẩm:** ${(Array.isArray(data.items) ? data.items : []).map((i: any) => i.name || "").join(", ")}`,
     }),
     orderTable,
   );
@@ -269,6 +303,7 @@ async function startMigration() {
       ownerId: userMap.get(data.ownerId as string),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
+      infoMarkdown: `**Giao dịch Sổ quỹ:** ${data.type || ""} ${data.amount || 0}\n**Hạng mục:** ${data.category || ""}\n**Ngày:** ${data.date || ""}\n**Ngân hàng:** ${data.bankName || ""}\n**Ghi chú:** ${data.note || ""}`,
     }),
     cashBookTable,
   );
@@ -288,6 +323,7 @@ async function startMigration() {
       ownerId: userMap.get(data.ownerId as string),
       createdByEmail: data.createdByEmail,
       createdAt: toTimestamp(data.createdAt),
+      infoMarkdown: `**Thanh toán:** ${data.amount || 0}\n**Khách hàng:** ${data.customerName || data.customerId || ""}\n**Ngày:** ${data.date || ""}\n**Phương thức:** ${data.paymentMethod || ""}\n**Ghi chú:** ${data.note || ""}`,
     }),
     paymentTable,
   );
@@ -302,6 +338,7 @@ async function startMigration() {
       bankId: data.bankId,
       updatedAt: toTimestamp(data.updatedAt),
       updatedBy: data.updatedBy,
+      infoMarkdown: `**Cấu hình hệ thống:** Tên TK: ${data.accountName || ""} - Số TK: ${data.accountNumber || ""} - Ngân hàng: ${data.bankId || ""}`,
     }),
     systemConfigTable,
   );

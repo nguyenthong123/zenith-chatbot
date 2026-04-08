@@ -87,7 +87,7 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
       return "Your account does not have access to this feature.";
 
     case "rate_limit:chat":
-      return "You've reached the message limit. Come back in 1 hour to continue chatting.";
+      return "Bạn đã hết lượt hỏi (giới hạn 5 câu cho khách). Vui lòng đăng nhập để tiếp tục!";
     case "not_found:chat":
       return "The requested chat was not found. Please check the chat ID and try again.";
     case "forbidden:chat":

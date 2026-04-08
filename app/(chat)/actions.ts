@@ -102,41 +102,75 @@ export async function handleInteractiveProductUpload(formData: FormData) {
     };
   }
 
+  // Ensure Cloudinary is configured with fresh, trimmed env vars
+  cloudinary.config({
+    cloud_name: (process.env.CLOUDINARY_CLOUD_NAME || "").trim(),
+    api_key: (process.env.CLOUDINARY_API_KEY || "").trim(),
+    api_secret: (process.env.CLOUDINARY_API_SECRET || "").trim(),
+    secure: true,
+  });
+
   const finalImageUrls: string[] = [];
   const uploadErrors: string[] = [];
 
   for (let i = 0; i < imagesBase64.length; i++) {
     const base64 = imagesBase64[i];
     try {
-      if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+      const slug = name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "-")
+        .toLowerCase();
+
+      if (
+        (process.env.CLOUDINARY_API_KEY || "").trim() &&
+        (process.env.CLOUDINARY_API_SECRET || "").trim()
+      ) {
         const result = await cloudinary.uploader.upload(base64, {
           folder: "chatbot-products",
-          public_id: `${name.replace(/\\s+/g, "-").toLowerCase()}-${i}-${Date.now()}`,
+          public_id: `${slug}-${i}-${Date.now()}`,
         });
         finalImageUrls.push(result.secure_url);
       } else {
         uploadErrors.push(`(Hình ${i + 1}) Thiếu Cloudinary Config.`);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Lỗi Cloudinary";
+      console.error(`[Cloudinary Upload Error - Image ${i + 1}]:`, err);
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as any).message)
+          : "Lỗi Cloudinary";
       uploadErrors.push(`(Hình ${i + 1}) ${message}`);
     }
   }
 
+  console.log(
+    `[Product Upload] User "${session.user.email}" (ID: ${session.user.id}) is uploading "${name}"`,
+  );
+
   if (finalImageUrls.length === 0) {
+    const errorPrefix = (process.env.CLOUDINARY_API_KEY || "").trim()
+      ? ""
+      : "[Thiếu API KEY] ";
     return {
       success: false,
-      message: `Tất cả file ảnh đều không thể tải lên kho lưu trữ. ${uploadErrors.join(", ")}`,
+      message: `${errorPrefix}Tất cả file ảnh đều không thể tải lên kho lưu trữ. ${uploadErrors.join(", ")}`,
     };
   }
 
   try {
+    const productimageUrls = finalImageUrls.join(", ");
+    console.log(
+      `[Database Upsert] Saving product "${name}" with images:`,
+      productimageUrls,
+    );
+
     const product = await upsertProduct({
       id: crypto.randomUUID(),
       name,
       note: note,
-      imageUrl: finalImageUrls.join(", "),
-      ownerId: session.user.id,
+      imageUrls: productimageUrls,
+      ownerId: session.user.id!,
       category,
       sku,
     });
@@ -145,4 +179,49 @@ export async function handleInteractiveProductUpload(formData: FormData) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, message: `Lỗi lưu Database: ${message}` };
   }
+}
+
+export async function fetchMyProducts() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    console.log("[fetchMyProducts] No session found.");
+    return [];
+  }
+  console.log(
+    `[fetchMyProducts] Fetching products for user ID: ${session.user.id} (${session.user.email})`,
+  );
+  const { getProductsByUserId } = await import("@/lib/db/queries");
+  const products = await getProductsByUserId({ userId: session.user.id });
+  console.log(`[fetchMyProducts] Found ${products.length} products.`);
+  return products;
+}
+
+export async function getProductDetailsAction(name: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  const { getProductsByNameAndUser } = await import("@/lib/db/queries");
+  const products = await getProductsByNameAndUser({
+    name,
+    userId: session.user.id,
+  });
+
+  if (products.length === 0) return null;
+
+  // Aggregate images
+  const allImages = Array.from(
+    new Set(
+      products.flatMap((p) =>
+        (p.imageUrls || "")
+          .split(",")
+          .map((i: any) => i.trim())
+          .filter(Boolean),
+      ),
+    ),
+  );
+
+  return {
+    sku: products[0].sku,
+    category: products[0].category,
+    images: allImages,
+  };
 }

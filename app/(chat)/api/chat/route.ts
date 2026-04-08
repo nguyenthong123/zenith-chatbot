@@ -24,20 +24,25 @@ import { getCashBookLookup } from "@/lib/ai/tools/cash-book-lookup";
 import { getChatHistorySearch } from "@/lib/ai/tools/chat-history";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getCustomerLookup } from "@/lib/ai/tools/customer-lookup";
+import { getDatabaseLookup } from "@/lib/ai/tools/database-lookup";
 import { getDatabaseDiagnostics } from "@/lib/ai/tools/diagnostic";
 import { getDocumentSearch } from "@/lib/ai/tools/document-search";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { knowledgeBaseLookup } from "@/lib/ai/tools/knowledge-base-lookup";
+import { orchestrateTasks } from "@/lib/ai/tools/orchestrate-tasks";
 import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
 import { getOrderSupabaseLookup } from "@/lib/ai/tools/order-supabase-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
+import { readImage } from "@/lib/ai/tools/read-image";
 import { readPdf } from "@/lib/ai/tools/read-pdf";
 import { readUrl } from "@/lib/ai/tools/read-url";
 import { requestProductUploadTool } from "@/lib/ai/tools/request-product-upload";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { saveKnowledge } from "@/lib/ai/tools/save-knowledge";
 import { getSaveProductTool } from "@/lib/ai/tools/save-product";
+import { sendTelegramNotification } from "@/lib/ai/tools/send-telegram-notification";
+import { generateStatus } from "@/lib/ai/tools/status";
 import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
 import { getSystemInfo } from "@/lib/ai/tools/system-info";
 import { updateDocument } from "@/lib/ai/tools/update-document";
@@ -48,6 +53,7 @@ import {
   createStreamId,
   deleteChatById,
   getChatById,
+  getMessageCountByUserId,
   getMessagesByChatId,
   getOrCreateUser,
   saveChat,
@@ -82,12 +88,18 @@ export { getStreamContext };
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log(
+      "[Chat API] Received Request Body:",
+      JSON.stringify(body, null, 2),
+    );
 
     let parsedBody: PostRequestBody;
     try {
       parsedBody = postRequestBodySchema.parse(body);
-    } catch (_error) {
-      return new ChatbotError("bad_request:api").toResponse();
+    } catch (error) {
+      console.error("[Chat API Schema Error]:", error);
+      const cause = error instanceof Error ? error.message : "Invalid payload";
+      return new ChatbotError("bad_request:api", cause).toResponse();
     }
 
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
@@ -102,10 +114,19 @@ export async function POST(request: Request) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 
-    const userUUID = isValidUUID(session.user.id)
-      ? session.user.id
-      : generateStableUUID(session.user.id);
-    const chatUUID = isValidUUID(id) ? id : generateStableUUID(id);
+    if (session.user.role === "guest") {
+      const messageCount = await getMessageCountByUserId({
+        id: session.user.id,
+        differenceInHours: 24 * 365,
+      });
+
+      if (messageCount >= 5) {
+        return new ChatbotError("rate_limit:chat").toResponse();
+      }
+    }
+
+    let userUUID = session.user.id;
+    const chatUUID = id;
 
     const chatModel = allowedModelIds.has(selectedChatModel)
       ? selectedChatModel
@@ -117,15 +138,31 @@ export async function POST(request: Request) {
 
     if (chat) {
       if (chat.userId !== userUUID) {
-        return new ChatbotError("forbidden:chat").toResponse();
+        // If the chat exists but user ID in session doesn't match chat.userId,
+        // double check if it's the same user (by email) in the DB.
+        const dbUser = await getOrCreateUser({
+          id: userUUID,
+          email: session.user.email ?? undefined,
+          name: session.user.name ?? undefined,
+        });
+
+        if (chat.userId !== dbUser.id) {
+          return new ChatbotError("forbidden:chat").toResponse();
+        }
+
+        // Sync the UUID if it matched the DB user but not the session
+        userUUID = dbUser.id;
       }
       messagesFromDb = await getMessagesByChatId({ id: chatUUID });
     } else {
-      await getOrCreateUser({
+      const dbUser = await getOrCreateUser({
         id: userUUID,
         email: session.user.email ?? undefined,
         name: session.user.name ?? undefined,
       });
+
+      // Update userUUID to the one actually in the database
+      userUUID = dbUser.id;
 
       if (message?.role === "user") {
         titlePromise = generateTitleFromUserMessage({ message });
@@ -283,6 +320,7 @@ export async function POST(request: Request) {
                   "readPdf",
                   "productLookup",
                   "saveProduct",
+                  "databaseLookup",
                   "customerLookup",
                   "orderLookup",
                   "orderSupabaseLookup",
@@ -295,8 +333,12 @@ export async function POST(request: Request) {
                   "searchChatHistory",
                   "documentSearch",
                   "getSystemInfo",
+                  "generateStatus",
                   "manageUserMemory",
                   "requestProductUpload",
+                  "sendTelegramNotification",
+                  "readImage",
+                  "orchestrateTasks",
                 ],
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
@@ -329,42 +371,48 @@ export async function POST(request: Request) {
             }),
             productLookup: getProductLookup(
               userUUID,
-              session.user.role || "user",
-              session.user.email ?? undefined,
+              session?.user?.role || "user",
+              session?.user?.email ?? undefined,
             ),
             saveProduct: getSaveProductTool(
               userUUID,
-              session.user.email ?? undefined,
+              session?.user?.email ?? undefined,
             ),
+            databaseLookup: getDatabaseLookup(
+              userUUID,
+              session?.user?.role || "user",
+              session?.user?.email ?? undefined,
+            ),
+            sendTelegramNotification,
             customerLookup: getCustomerLookup(
               userUUID,
-              session.user.role || "user",
-              session.user.email ?? undefined,
+              session?.user?.role || "user",
+              session?.user?.email ?? undefined,
             ),
             orderLookup: getOrderLookup(
               userUUID,
-              session.user.role || "user",
-              session.user.email ?? undefined,
+              session?.user?.role || "user",
+              session?.user?.email ?? undefined,
             ),
             orderSupabaseLookup: getOrderSupabaseLookup(
-              session.user.id,
-              session.user.role || "user",
-              session.user.email,
+              userUUID,
+              session?.user?.role || "user",
+              session?.user?.email ?? undefined,
             ),
             userLookup: getUserLookup(
-              session.user.id,
+              userUUID,
               session.user.role || "user",
               session.user.email,
             ),
             billingLookup: getBillingLookup(
               userUUID,
-              session.user.role || "user",
-              session.user.email ?? undefined,
+              session?.user?.role || "user",
+              session?.user?.email ?? undefined,
             ),
             cashBookLookup: getCashBookLookup(
               userUUID,
-              session.user.role || "user",
-              session.user.email ?? undefined,
+              session?.user?.role || "user",
+              session?.user?.email ?? undefined,
             ),
             knowledgeBaseLookup,
             saveKnowledge: saveKnowledge(userUUID),
@@ -372,9 +420,12 @@ export async function POST(request: Request) {
             searchChatHistory: getChatHistorySearch(userUUID),
             documentSearch: getDocumentSearch(userUUID),
             getSystemInfo: getSystemInfo(),
+            generateStatus: generateStatus(),
             manageUserMemory: getManageUserMemory(userUUID),
             getDatabaseDiagnostics: getDatabaseDiagnostics(),
             requestProductUpload: requestProductUploadTool,
+            readImage,
+            orchestrateTasks,
           },
           experimental_telemetry: {
             isEnabled: process.env.NODE_ENV === "production",
@@ -475,6 +526,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[Chat API Error]:", error);
     const _vercelId = request.headers.get("x-vercel-id");
 
     if (error instanceof ChatbotError) {
@@ -489,7 +541,10 @@ export async function POST(request: Request) {
     ) {
       return new ChatbotError("bad_request:activate_gateway").toResponse();
     }
-    return new ChatbotError("offline:chat").toResponse();
+    return new ChatbotError(
+      "offline:chat",
+      error instanceof Error ? error.message : undefined,
+    ).toResponse();
   }
 }
 

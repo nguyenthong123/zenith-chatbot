@@ -160,7 +160,7 @@ export const getSaveProductTool = (userId: string, userEmail?: string) =>
           name: name.trim(),
           sku,
           note: description,
-          imageUrl: combinedUrl,
+          imageUrls: combinedUrl,
           category: category || "General",
           ownerId: userId,
           ownerEmail: userEmail,

@@ -1,8 +1,11 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
-import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
+import {
+  deleteAllChatsByUserId,
+  getChatsByUserId,
+  getOrCreateUser,
+} from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
-import { generateStableUUID, isValidUUID } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -27,11 +30,14 @@ export async function GET(request: NextRequest) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const userUUID = isValidUUID(session.user.id)
-    ? session.user.id
-    : generateStableUUID(session.user.id);
-
   try {
+    const dbUser = await getOrCreateUser({
+      id: session.user.id,
+      email: session.user.email ?? undefined,
+      name: session.user.name ?? undefined,
+    });
+    const userUUID = dbUser.id;
+
     const chats = await getChatsByUserId({
       id: userUUID,
       limit,
@@ -55,9 +61,12 @@ export async function DELETE() {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const userUUID = isValidUUID(session.user.id)
-    ? session.user.id
-    : generateStableUUID(session.user.id);
+  const dbUser = await getOrCreateUser({
+    id: session.user.id,
+    email: session.user.email ?? undefined,
+    name: session.user.name ?? undefined,
+  });
+  const userUUID = dbUser.id;
 
   const result = await deleteAllChatsByUserId({ userId: userUUID });
 

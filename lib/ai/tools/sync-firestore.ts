@@ -131,7 +131,6 @@ export const syncFirestoreToSupabase = tool({
                 photoUrl: data.photoURL || "",
                 role: data.role || "user",
                 firestoreId: id,
-                zaloId: data.zaloId ? String(data.zaloId) : null,
                 createdAt: toTimestamp(data.createdAt) || new Date(),
                 updatedAt: toTimestamp(data.updatedAt) || new Date(),
               };

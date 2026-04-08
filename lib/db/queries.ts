@@ -23,11 +23,14 @@ import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { ChatbotError } from "../errors";
 import { generateStableUUID, generateUUID, isValidUUID } from "../utils";
 import {
+  cashBook,
   chat,
+  customer,
   type DBMessage,
   document,
   knowledgeBase,
   message,
+  order,
   payment,
   product,
   type Suggestion,
@@ -47,8 +50,17 @@ const globalForPostgres = globalThis as unknown as {
 };
 
 const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (!dbUrl) {
+  console.error("CRITICAL: No database URL found in environment!");
+} else {
+  console.log(
+    "Database Initializing with URL (masked):",
+    dbUrl.replace(/:[^:@]+@/, ":***@"),
+  );
+}
 const client =
-  globalForPostgres.postgres ?? postgres(dbUrl ?? "", { prepare: false });
+  globalForPostgres.postgres ??
+  postgres(dbUrl ?? "", { prepare: false, ssl: "require" });
 
 if (process.env.NODE_ENV !== "production") {
   globalForPostgres.postgres = client;
@@ -78,22 +90,6 @@ export async function getUserByEmail(email: string): Promise<User[]> {
     return await db.select().from(user).where(eq(user.email, email));
   } catch (_error) {
     return [];
-  }
-}
-
-export async function getUserByZaloId(zaloId: string): Promise<User[]> {
-  try {
-    return await db.select().from(user).where(eq(user.zaloId, zaloId));
-  } catch (_error) {
-    return [];
-  }
-}
-
-export async function updateUserZaloId(userId: string, zaloId: string) {
-  try {
-    return await db.update(user).set({ zaloId }).where(eq(user.id, userId));
-  } catch (_error) {
-    throw new ChatbotError("bad_request:database", "Failed to update zaloId");
   }
 }
 
@@ -180,7 +176,15 @@ export async function getOrCreateUser({
       .returning();
 
     return newUser;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Database Error in getOrCreateUser:", {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      query: error.query,
+      params: error.params,
+    });
     throw new ChatbotError(
       "bad_request:database",
       error instanceof Error ? error.message : "Failed to sync user",
@@ -216,6 +220,19 @@ export async function saveChat({
   const userUUID = isValidUUID(userId) ? userId : generateStableUUID(userId);
 
   try {
+    const [existingUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userUUID));
+    if (!existingUser) {
+      console.warn(
+        `[DB Warning: saveChat]: User ${userUUID} not found. Creating a guest entry if needed.`,
+      );
+      // Optional: Auto-create guest user if missing?
+      // For now, let's just proceed and let the DB fail if not found,
+      // but we add a clearer error message.
+    }
+
     return await db.insert(chat).values({
       id: chatUUID,
       createdAt: new Date(),
@@ -223,8 +240,12 @@ export async function saveChat({
       title,
       visibility,
     });
-  } catch (_error) {
-    throw new ChatbotError("bad_request:database", "Failed to save chat");
+  } catch (error) {
+    console.error("[DB Error: saveChat]:", error);
+    throw new ChatbotError(
+      "bad_request:database",
+      error instanceof Error ? error.message : "Failed to save chat",
+    );
   }
 }
 
@@ -363,9 +384,10 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
       })),
     );
   } catch (error) {
+    console.error("[DB Error: saveMessages]:", error);
     throw new ChatbotError(
       "bad_request:database",
-      error instanceof Error ? error.message : "Failed to get messages",
+      error instanceof Error ? error.message : "Failed to save messages",
     );
   }
 }
@@ -877,47 +899,6 @@ export async function saveKnowledgeBaseItem({
   }
 }
 
-export async function getZaloConfig() {
-  try {
-    const configs = await db.select().from(zaloConfig).limit(1);
-    return configs[0] || null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-export async function setZaloConfig({
-  accessToken,
-  refreshToken,
-  expiresAt,
-}: {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: Date;
-}) {
-  try {
-    return await db
-      .insert(zaloConfig)
-      .values({
-        id: "default",
-        accessToken,
-        refreshToken,
-        expiresAt,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: zaloConfig.id,
-        set: {
-          accessToken,
-          refreshToken,
-          expiresAt,
-          updatedAt: new Date(),
-        },
-      });
-  } catch (_error) {
-    throw new ChatbotError("bad_request:database", "Failed to set zalo config");
-  }
-}
 export async function getSystemConfig() {
   try {
     const [config] = await db.select().from(systemConfig).limit(1);
@@ -1010,7 +991,7 @@ export async function upsertProduct(data: {
   name: string;
   sku?: string;
   note?: string;
-  imageUrl?: string;
+  imageUrls?: string;
   category?: string;
   ownerId: string;
   ownerEmail?: string;
@@ -1037,26 +1018,27 @@ export async function upsertProduct(data: {
 
   if (existing.length > 0) {
     const p = existing[0];
-    const newImages =
-      data.imageUrl
-        ?.split(",")
-        .map((i: string) => i.trim())
-        .filter(Boolean) || [];
     const oldImages =
-      p.imageUrl
+      p.imageUrls
         ?.split(",")
         .map((i: string) => i.trim())
         .filter(Boolean) || [];
 
+    const newImages =
+      data.imageUrls
+        ?.split(",")
+        .map((i: string) => i.trim())
+        .filter((i: string) => i.startsWith("http")) || [];
+
     // Merge and unique
-    const allImages = Array.from(new Set([...oldImages, ...newImages])).join(
-      ", ",
-    );
+    const allImages = Array.from(new Set([...oldImages, ...newImages]))
+      .filter(Boolean)
+      .join(", ");
 
     const result = await db
       .update(product)
       .set({
-        imageUrl: allImages,
+        imageUrls: allImages,
         note: data.note || p.note,
         sku: data.sku || p.sku,
         category: data.category || p.category,
@@ -1066,13 +1048,161 @@ export async function upsertProduct(data: {
       .returning();
     return result;
   }
+
   const insertResult = await db
     .insert(product)
     .values({
-      ...data,
+      id: data.id,
+      name: data.name,
+      sku: data.sku,
+      category: data.category,
+      note: data.note,
+      imageUrls: data.imageUrls,
+      ownerId: data.ownerId,
+      ownerEmail: data.ownerEmail,
       createdAt: new Date(),
       updatedAt: new Date(),
     })
     .returning();
   return insertResult;
+}
+
+export async function getProductsByUserId({ userId }: { userId: string }) {
+  try {
+    return await db
+      .select()
+      .from(product)
+      .where(eq(product.ownerId, userId))
+      .orderBy(desc(product.updatedAt));
+  } catch (error) {
+    console.error("Failed to fetch products:", error);
+    return [];
+  }
+}
+
+export async function getProductsByNameAndUser({
+  name,
+  userId,
+}: {
+  name: string;
+  userId: string;
+}) {
+  try {
+    return await db
+      .select()
+      .from(product)
+      .where(
+        and(ilike(product.name, `%${name}%`), eq(product.ownerId, userId)),
+      );
+  } catch (error) {
+    console.error("Failed to fetch product by name:", error);
+    return [];
+  }
+}
+
+export async function getOrdersByUserId({ userId }: { userId: string }) {
+  try {
+    return await db
+      .select()
+      .from(order)
+      .where(eq(order.ownerId, userId))
+      .orderBy(desc(order.createdAt));
+  } catch (error) {
+    console.error("Failed to fetch orders:", error);
+    return [];
+  }
+}
+
+export async function getTotalPaymentsByUserId({
+  userId,
+}: {
+  userId: string;
+}): Promise<number> {
+  try {
+    const result = await db
+      .select({ total: sql<number>`sum(${payment.amount})` })
+      .from(payment)
+      .where(eq(payment.ownerId, userId));
+    return Number(result[0]?.total || 0);
+  } catch (error) {
+    console.error("Failed to fetch total payments:", error);
+    return 0;
+  }
+}
+
+export async function getAllProductsByUserId({ userId }: { userId: string }) {
+  try {
+    return await db
+      .select()
+      .from(product)
+      .where(eq(product.ownerId, userId))
+      .orderBy(desc(product.createdAt));
+  } catch (_error) {
+    return [];
+  }
+}
+
+export async function getCustomersByUserId({ userId }: { userId: string }) {
+  try {
+    return await db
+      .select()
+      .from(customer)
+      .where(eq(customer.ownerId, userId))
+      .orderBy(desc(customer.createdAt));
+  } catch (_error) {
+    return [];
+  }
+}
+
+export async function getCashBookByUserId({ userId }: { userId: string }) {
+  try {
+    return await db
+      .select()
+      .from(cashBook)
+      .where(eq(cashBook.ownerId, userId))
+      .orderBy(desc(cashBook.createdAt));
+  } catch (_error) {
+    return [];
+  }
+}
+
+export async function getZaloConfig() {
+  try {
+    const [config] = await db
+      .select()
+      .from(zaloConfig)
+      .where(eq(zaloConfig.id, "default"));
+    return config || null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+export async function upsertZaloConfig(data: {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: Date;
+}) {
+  try {
+    return await db
+      .insert(zaloConfig)
+      .values({
+        id: "default",
+        ...data,
+      })
+      .onConflictDoUpdate({
+        target: zaloConfig.id,
+        set: {
+          ...data,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+  } catch (error) {
+    console.error("Failed to upsert Zalo config:", error);
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to save Zalo configuration",
+    );
+  }
 }

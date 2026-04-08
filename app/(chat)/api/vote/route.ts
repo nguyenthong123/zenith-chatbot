@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { getChatById, getVotesByChatId, voteMessage } from "@/lib/db/queries";
+import {
+  getChatById,
+  getOrCreateUser,
+  getVotesByChatId,
+  voteMessage,
+} from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
 import { isValidUUID } from "@/lib/utils";
 
@@ -32,13 +37,20 @@ export async function GET(request: Request) {
       return new ChatbotError("unauthorized:vote").toResponse();
     }
 
-    const chat = await getChatById({ id: chatId });
+    const [chat, dbUser] = await Promise.all([
+      getChatById({ id: chatId }),
+      getOrCreateUser({
+        id: session.user.id,
+        email: session.user.email ?? undefined,
+        name: session.user.name ?? undefined,
+      }),
+    ]);
 
     if (!chat) {
       return new ChatbotError("not_found:chat").toResponse();
     }
 
-    if (chat.userId !== session.user.id) {
+    if (chat.userId !== dbUser.id) {
       return new ChatbotError("forbidden:vote").toResponse();
     }
 
@@ -72,13 +84,20 @@ export async function PATCH(request: Request) {
       return new ChatbotError("unauthorized:vote").toResponse();
     }
 
-    const chat = await getChatById({ id: chatId });
+    const [chat, dbUser] = await Promise.all([
+      getChatById({ id: chatId }),
+      getOrCreateUser({
+        id: session.user.id,
+        email: session.user.email ?? undefined,
+        name: session.user.name ?? undefined,
+      }),
+    ]);
 
     if (!chat) {
       return new ChatbotError("not_found:vote").toResponse();
     }
 
-    if (chat.userId !== session.user.id) {
+    if (chat.userId !== dbUser.id) {
       return new ChatbotError("forbidden:vote").toResponse();
     }
 

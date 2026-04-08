@@ -38,78 +38,73 @@ export const getOrderSupabaseLookup = (
       try {
         const supabase = createSupabaseAdminClient();
 
-        let query = supabase
+        let queryBuilder = supabase
           .from("orders")
           .select(
             "id, orderId, customerId, customerName, totalAmount, status, date, items, ownerId, ownerEmail, createdBy, createdByEmail, updatedBy, createdAt, updatedAt",
+            { count: "exact" },
           )
-          .order("date", { ascending: false })
-          .limit(20);
+          .order("date", { ascending: false });
 
         // Role-based data isolation
         if (userRole !== "admin") {
-          // Non-admin: filter by ownerEmail (session email) for data isolation
-          if (userEmail) {
-            query = query.eq("ownerEmail", userEmail);
-          } else if (userId) {
-            query = query.eq("ownerId", userId);
+          const isolationClauses = [];
+          if (userEmail) isolationClauses.push(`ownerEmail.eq.${userEmail}`);
+          if (userId) isolationClauses.push(`ownerId.eq.${userId}`);
+
+          if (isolationClauses.length > 0) {
+            queryBuilder = queryBuilder.or(isolationClauses.join(","));
           } else {
             return {
               error: "Không thể xác định người dùng. Vui lòng đăng nhập lại.",
               ordersCount: 0,
+              totalCount: 0,
               totalRevenue: 0,
             };
           }
         } else if (employeeEmail) {
-          // Admin can filter by specific employee
-          query = query.eq(
+          queryBuilder = queryBuilder.eq(
             "createdByEmail",
             employeeEmail.replace(/[%_]/g, ""),
           );
         }
 
         if (customerName) {
-          query = query.ilike(
+          queryBuilder = queryBuilder.ilike(
             "customerName",
             `%${customerName.replace(/[%_]/g, "")}%`,
           );
         }
         if (startDate) {
-          query = query.gte("date", startDate);
+          queryBuilder = queryBuilder.gte("date", startDate);
         }
         if (endDate) {
-          query = query.lte("date", endDate);
+          queryBuilder = queryBuilder.lte("date", endDate);
         }
         if (status) {
-          query = query.eq("status", status);
+          queryBuilder = queryBuilder.eq("status", status);
         }
 
-        const { data, error } = await query;
+        const {
+          data: allMatching,
+          error: statsError,
+          count,
+        } = await queryBuilder;
 
-        if (error) {
-          return {
-            error: "Lỗi khi truy vấn bảng orders từ Supabase.",
-            message: error.message,
-          };
+        if (statsError) {
+          throw statsError;
         }
 
-        if (!data || data.length === 0) {
-          return {
-            ordersCount: 0,
-            totalRevenue: 0,
-            message: "Không tìm thấy đơn hàng nào phù hợp.",
-          };
-        }
+        const totalRevenue =
+          allMatching?.reduce((acc, o) => acc + (o.totalAmount || 0), 0) || 0;
 
-        const totalRevenue = data.reduce(
-          (acc, o) => acc + (o.totalAmount || 0),
-          0,
-        );
+        const results = allMatching?.slice(0, 20) || [];
 
         return {
-          ordersCount: data.length,
+          ordersCount: results.length,
+          totalCount: count || 0,
           totalRevenue,
-          orders: data.map((o) => ({
+          orders: results.map((o) => ({
             orderId: o.orderId,
             customerName: o.customerName,
             totalAmount: o.totalAmount,
@@ -124,7 +119,6 @@ export const getOrderSupabaseLookup = (
           })),
         };
       } catch (error) {
-        // biome-ignore lint/suspicious/noConsole: error logging in tool execution
         console.error("Order Supabase lookup failed:", error);
         return {
           error: "Không thể truy vấn đơn hàng từ Supabase.",

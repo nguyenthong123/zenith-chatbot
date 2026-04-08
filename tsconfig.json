@@ -31,5 +31,13 @@
     "next.config.js",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "tmp", ".next", "dist"]
+  "exclude": [
+    "node_modules",
+    "tmp",
+    ".next",
+    "dist",
+    "test-models.ts",
+    "proxy.ts",
+    "test_tool.ts"
+  ]
 }

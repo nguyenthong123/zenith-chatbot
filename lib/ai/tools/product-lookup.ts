@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, eq, ilike, isNotNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/queries";
 import {
@@ -16,16 +16,26 @@ export const getProductLookup = (
 ) =>
   tool({
     description:
-      "Search for products, prices, and price lists in the Supabase database. Use this to answer customer questions about product availability and pricing.",
+      "Search for products, prices, images, photos, and price lists in the Supabase database. Use this to answer customer questions about product availability, pricing, and visual appearance.",
     inputSchema: z.object({
       query: z
         .string()
-        .describe("The name of the product or category to search for."),
+        .optional()
+        .describe(
+          "The name of the product or category to search for. Leave empty to list recent products.",
+        ),
+      hasImages: z
+        .boolean()
+        .optional()
+        .describe("If true, only return products that have images."),
     }),
-    execute: async ({ query }) => {
+    execute: async ({ query, hasImages }) => {
       try {
-        // Standardize common terms (e.g. "ly" to "mm" in Vietnamese context)
-        const normalizedQuery = query.toLowerCase().replace(/\s+ly\b/g, "mm");
+        let normalizedQuery = query?.toLowerCase().trim() || "";
+        if (normalizedQuery === "undefined" || normalizedQuery === "null") {
+          normalizedQuery = "";
+        }
+        normalizedQuery = normalizedQuery.replace(/\s+ly\b/g, "mm");
 
         // Split into keywords to allow partial/out-of-order matches
         const keywords = normalizedQuery
@@ -47,6 +57,11 @@ export const getProductLookup = (
           ilike(priceList.title, `%${kw}%`),
         );
 
+        // Filter for images if requested
+        if (hasImages) {
+          conditions.push(isNotNull(product.imageUrls));
+        }
+
         // Mandatory account isolation by email/ID
         conditions.push(
           or(
@@ -67,14 +82,14 @@ export const getProductLookup = (
           .select()
           .from(product)
           .where(conditions.length > 0 ? and(...conditions) : undefined)
-          .limit(10);
+          .limit(20);
 
         // 2. Search in price lists table titles
         const priceLists = await db
           .select()
           .from(priceList)
           .where(plConditions.length > 0 ? and(...plConditions) : undefined)
-          .limit(5);
+          .limit(10);
 
         if (products.length === 0 && priceLists.length === 0) {
           return {
@@ -86,12 +101,13 @@ export const getProductLookup = (
           products: products.map((p: Product) => ({
             ...p,
             priceBuy: userRole === "admin" ? p.priceBuy : undefined, // Only admins see cost price
-            imageUrls: p.imageUrl
-              ? p.imageUrl
+            imageUrls: p.imageUrls
+              ? p.imageUrls
                   .split(",")
                   .map((url) => url.trim())
                   .filter(Boolean)
               : [],
+            infoMarkdown: p.infoMarkdown,
           })),
           priceLists: priceLists.map((pl: PriceList) => ({
             title: pl.title,

@@ -1,8 +1,8 @@
 export const DEFAULT_CHAT_MODEL = "google/gemini-2.5-flash";
 
 export const titleModel: ChatModel = {
-  id: "google/gemini-2.5-flash",
-  name: "Gemini 2.5 Flash",
+  id: DEFAULT_CHAT_MODEL,
+  name: "Gemini 2.0 Flash",
   provider: "google",
   description: "Fast model for title generation",
 };
@@ -27,7 +27,7 @@ export const chatModels: ChatModel[] = [
     id: "google/gemini-2.5-flash",
     name: "Gemini 2.5 Flash",
     provider: "google",
-    description: "Ultra-fast Gemini 2.5 for daily tasks",
+    description: "Ultra-fast Gemini 2.5 for testing",
   },
   {
     id: "google/gemini-2.5-pro",
@@ -39,7 +39,25 @@ export const chatModels: ChatModel[] = [
     id: "google/gemini-3.1-pro-preview",
     name: "Gemini 3.1 Pro Preview",
     provider: "google",
-    description: "Next-gen Gemini 3.1 with massive intelligence",
+    description: "Next-generation Gemini preview",
+  },
+  {
+    id: "google/gemini-2.0-flash",
+    name: "Gemini 2.0 Flash",
+    provider: "google",
+    description: "Stable Gemini 2.0 model for general use",
+  },
+  {
+    id: "google/gemini-1.5-pro-002",
+    name: "Gemini 1.5 Pro",
+    provider: "google",
+    description: "Stable Gemini 1.5 for complex reasoning",
+  },
+  {
+    id: "google/gemini-2.0-flash-lite-preview-02-05",
+    name: "Gemini 2.0 Flash Lite",
+    provider: "google",
+    description: "Efficient Gemini 2.0 for daily tasks",
   },
   {
     id: "deepseek/deepseek-v3.2",

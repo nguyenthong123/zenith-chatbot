@@ -159,9 +159,9 @@ const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
     return <Shimmer className="font-medium" duration={1}>Thinking...</Shimmer>;
   }
   if (duration === undefined) {
-    return <p>Thought for a few seconds</p>;
+    return <span>Thought for a few seconds</span>;
   }
-  return <p>Thought for {duration} seconds</p>;
+  return <span>Thought for {duration} seconds</span>;
 };
 
 export const ReasoningTrigger = memo(
@@ -203,6 +203,16 @@ export type ReasoningContentProps = HTMLAttributes<HTMLDivElement> & {
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+const streamdownComponents: ComponentProps<typeof Streamdown>["components"] = {
+  p: function StreamdownParagraphOverride({ children, className, style }) {
+    return (
+      <div className={className} style={style}>
+        {children}
+      </div>
+    );
+  },
+};
+
 export const ReasoningContent = memo(
   ({
     className,
@@ -236,8 +246,9 @@ export const ReasoningContent = memo(
           dir={dir}
         >
           <Streamdown
-            plugins={streamdownPlugins}
             {...props}
+            components={streamdownComponents}
+            plugins={streamdownPlugins}
           >
             {children}
           </Streamdown>

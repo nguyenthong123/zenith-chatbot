@@ -29,12 +29,15 @@ export function getLanguageModel(modelId: string) {
     return myProvider.languageModel(modelId);
   }
 
+  // Use the gateway for everything in Demo mode or as a flexible fallback
+  const isDemo = process.env.IS_DEMO === "1";
+  if (isDemo) {
+    return gateway.languageModel(modelId);
+  }
+
   if (modelId.startsWith("google/")) {
-    let googleId = modelId.replace("google/", "");
-    // Map legacy -latest IDs back to base IDs
-    if (googleId.endsWith("-latest")) {
-      googleId = googleId.replace("-latest", "");
-    }
+    const googleId = modelId.replace("google/", "");
+    // Using exact model IDs from Google
     return google(googleId);
   }
 

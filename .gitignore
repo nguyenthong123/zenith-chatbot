@@ -30,3 +30,7 @@ tsconfig.tsbuildinfo
 # Firebase Service Account keys
 *-firebase-adminsdk-*.json
 config/service-account.json
+
+# Temporary files
+tmp/
+

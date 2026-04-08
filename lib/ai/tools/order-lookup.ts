@@ -61,23 +61,36 @@ export const getOrderLookup = (
           conditions.push(eq(order.status, status));
         }
 
-        const results = await db
+        const whereClause =
+          conditions.length > 0 ? and(...conditions) : undefined;
+
+        // 1. Get the global totals for ALL matching records
+        const allMatchingOrders = await db
           .select()
           .from(order)
-          .where(conditions.length > 0 ? and(...conditions) : undefined)
-          .orderBy(desc(order.date))
-          .limit(20);
+          .where(whereClause);
 
-        const totalRevenue = results.reduce(
+        const totalCount = allMatchingOrders.length;
+        const grandTotalRevenue = allMatchingOrders.reduce(
           (acc, o) => acc + (o.totalAmount || 0),
           0,
         );
 
+        // 2. Get the orders for the current page/limit for display
+        const results = allMatchingOrders
+          .sort((a, b) => {
+            if (!a.date || !b.date) return 0;
+            return b.date.localeCompare(a.date);
+          })
+          .slice(0, 20);
+
         return {
           ordersCount: results.length,
-          totalRevenue,
+          totalCount,
+          totalRevenue: grandTotalRevenue,
           orders: results.map((o: Order) => ({
             ...o,
+            infoMarkdown: o.infoMarkdown,
           })),
         };
       } catch (error) {

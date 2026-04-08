@@ -322,15 +322,29 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+const streamdownComponents: ComponentProps<typeof Streamdown>["components"] = {
+  p: function StreamdownParagraphOverride({ children, className, style }) {
+    return (
+      <div className={className} style={style}>
+        {children}
+      </div>
+    );
+  },
+};
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
+      {...props}
       className={cn(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
+      components={{
+        ...props.components,
+        ...streamdownComponents,
+      }}
       plugins={streamdownPlugins}
-      {...props}
     />
   ),
   (prevProps, nextProps) => prevProps.children === nextProps.children

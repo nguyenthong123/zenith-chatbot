@@ -9,6 +9,7 @@ import { getOrderLookup } from "@/lib/ai/tools/order-lookup";
 import { getOrderSupabaseLookup } from "@/lib/ai/tools/order-supabase-lookup";
 import { getProductLookup } from "@/lib/ai/tools/product-lookup";
 import { getSaveProductTool } from "@/lib/ai/tools/save-product";
+import { generateStatus } from "@/lib/ai/tools/status";
 import { getUserLookup } from "@/lib/ai/tools/user-lookup";
 
 export interface HeadlessChatOptions {
@@ -63,6 +64,7 @@ export async function generateHeadlessResponse({
       userLookup: getUserLookup(userId, userRole, userEmail),
       billingLookup: getBillingLookup(userId, userRole),
       cashBookLookup: getCashBookLookup(userId, userRole),
+      generateStatus: generateStatus(),
     },
     onStepFinish: async ({ toolCalls }) => {
       if (toolCalls.length > 0 && onToolCall) {
