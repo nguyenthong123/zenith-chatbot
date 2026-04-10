@@ -9,6 +9,10 @@ import { webSearch } from "./search-tools";
 // gemini-2.5-flash — thinking disabled via providerOptions in generateText
 const model = google("gemini-2.5-flash");
 
+// Timeout limits for Gemini generateText calls (prevents indefinite hangs)
+const PASS_1_TIMEOUT_MS = 30_000;
+const PASS_2_TIMEOUT_MS = 25_000;
+
 export interface AgentContext {
   telegramId: string;
   chatId: string;
@@ -418,7 +422,7 @@ export async function processMessage(
         tools: declarationTools,
         providerOptions: { google: { thinkingConfig: { thinkingBudget: 1024 } } },
       }),
-      30_000,
+      PASS_1_TIMEOUT_MS,
       "Pass 1",
     );
     console.log(
@@ -492,7 +496,7 @@ export async function processMessage(
           messages: pass2Messages,
           providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
         }),
-        25_000,
+        PASS_2_TIMEOUT_MS,
         "Pass 2",
       );
       console.log(

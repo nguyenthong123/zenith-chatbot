@@ -23,7 +23,10 @@ export async function POST(req: Request) {
       try {
         await bot.handleUpdate(body);
       } catch (error) {
-        console.error("Telegram Background Processing Error:", error);
+        console.error(
+          `Telegram Background Processing Error (update_id: ${body?.update_id}):`,
+          error,
+        );
       }
     });
 
