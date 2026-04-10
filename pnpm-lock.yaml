@@ -224,6 +224,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.16)
+      telegraf:
+        specifier: ^4.16.3
+        version: 4.16.3
       turndown:
         specifier: ^7.2.2
         version: 7.2.2
@@ -294,9 +297,6 @@ importers:
       tailwindcss:
         specifier: ^4.1.13
         version: 4.1.16
-      telegraf:
-        specifier: ^4.16.3
-        version: 4.16.3
       tsx:
         specifier: ^4.19.1
         version: 4.19.3
