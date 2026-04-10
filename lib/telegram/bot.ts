@@ -227,25 +227,40 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       // 2. Standard Text Reply with Robust HTML Sanitation
       const rawText =
         response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
+
+      // Step A: Convert Markdown formatting to HTML (Gemini sometimes mixes formats)
       let sanitizedText = rawText
+        .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") // **bold** → <b>
+        .replace(/\*(.+?)\*/g, "<i>$1</i>") // *italic* → <i>
+        .replace(/`([^`]+)`/g, "<code>$1</code>"); // `code` → <code>
+
+      // Step B: Convert block-level HTML tags to text equivalents (with attribute support)
+      sanitizedText = sanitizedText
         .replace(
-          /<\/?(ul|ol|div|p|h[1-6]|table|tr|td|th|thead|tbody|span)\s*\/?>/gi,
+          /<\/?(ul|ol|div|p|h[1-6]|table|tr|td|th|thead|tbody|section|article|header|footer|nav|main|span)(\s[^>]*)?\/?>/gi,
           "\n",
         ) // Block-level → newlines
-        .replace(/<li\s*\/?>/gi, "• ") // <li> → bullet
+        .replace(/<li(\s[^>]*)?\/?>/gi, "• ") // <li> → bullet
         .replace(/<\/li>/gi, "\n") // </li> → newline
-        .replace(/<br\s*\/?>/gi, "\n") // <br> → newline
-        .replace(/<hr\s*\/?>/gi, "\n───\n"); // <hr> → separator
-      // Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
+        .replace(/<br(\s[^>]*)?\/?>/gi, "\n") // <br> → newline
+        .replace(/<hr(\s[^>]*)?\/?>/gi, "\n───\n") // <hr> → separator
+        .replace(/<img[^>]*>/gi, "") // Strip images
+        .replace(/<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi, ""); // Strip dangerous/unsupported tags
+
+      // Step C: Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
+      // Telegram supports: b, strong, i, em, u, ins, s, strike, del, a, code, pre, blockquote
       // Loop to handle nested/obfuscated tags (e.g. <scr<script>ipt>)
       const allowedTagPattern =
-        /<\/?(?!\/?(b|strong|i|em|u|ins|s|strike|del|a|code|pre|blockquote)\b)[^>]*>/gi;
+        /<\/?(?!(b|strong|i|em|u|ins|s|strike|del|a|code|pre|blockquote)\b)[a-zA-Z][^>]*>/gi;
       let prev = "";
       while (prev !== sanitizedText) {
         prev = sanitizedText;
         sanitizedText = sanitizedText.replace(allowedTagPattern, "");
       }
+
+      // Step D: Fix common issues with remaining allowed tags
       sanitizedText = sanitizedText
+        .replace(/<a\b(?![^>]*href=)[^>]*>/gi, "") // Strip <a> without href
         .replace(/\n{3,}/g, "\n\n") // Collapse excessive newlines
         .trim();
 
