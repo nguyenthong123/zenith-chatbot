@@ -245,7 +245,10 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
         .replace(/<br(\s[^>]*)?\/?>/gi, "\n") // <br> → newline
         .replace(/<hr(\s[^>]*)?\/?>/gi, "\n───\n") // <hr> → separator
         .replace(/<img[^>]*>/gi, "") // Strip images
-        .replace(/<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi, ""); // Strip dangerous/unsupported tags
+        .replace(
+          /<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi,
+          "",
+        ); // Strip dangerous/unsupported tags
 
       // Step C: Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
       // Telegram supports: b, strong, i, em, u, ins, s, strike, del, a, code, pre, blockquote
