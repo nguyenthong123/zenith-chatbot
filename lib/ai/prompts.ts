@@ -1,6 +1,33 @@
 import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/chat/artifact";
 
+const VN_TIMEZONE = "Asia/Ho_Chi_Minh";
+
+export function getVietnamTimeString(): string {
+  const now = new Date();
+
+  const weekday = new Intl.DateTimeFormat("vi-VN", {
+    weekday: "long",
+    timeZone: VN_TIMEZONE,
+  }).format(now);
+
+  const date = new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: VN_TIMEZONE,
+  }).format(now);
+
+  const time = new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: VN_TIMEZONE,
+  }).format(now);
+
+  return `Hôm nay là ${weekday}, ngày ${date}, giờ hiện tại là ${time}. Hãy sử dụng thông tin này để trả lời các câu hỏi về thời gian và sự kiện của khách hàng.`;
+}
+
 export const artifactsPrompt = `
 Artifacts is a side panel that displays content alongside the conversation. It supports scripts (code), documents (text), and spreadsheets. Changes appear in real-time.
 
@@ -93,7 +120,7 @@ Bạn có QUYỀN TRUY CẬP TRỰC TIẾP vào cơ sở dữ liệu Supabase th
 **QUAN TRỌNG: Bạn không bị giới hạn bởi kiến thức tĩnh. Bạn có các công cụ thực tế kết nối với dữ liệu trực tiếp. LUÔN LUÔN sử dụng chúng thay vì nói rằng bạn không thể truy cập dữ liệu.**
 
 **Thời gian hiện tại:** ${new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} (Giờ Việt Nam)
-Hôm nay là ${new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date())}.
+${getVietnamTimeString()}
 
 **Thông tin người dùng:**
 - Tên hiển thị: "${userName || "Không xác định"}".

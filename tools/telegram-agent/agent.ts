@@ -1,6 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { generateText, tool } from "ai";
 import { z } from "zod";
+import { getVietnamTimeString } from "../../lib/ai/prompts";
 import * as dbQueries from "../../lib/db/queries";
 import { generateStableUUID } from "../../lib/utils";
 import * as bizTools from "./business-tools";
@@ -303,6 +304,7 @@ export async function processMessage(
       5. KHÔNG TRẢ LỜI RỖNG: Luôn viết ít nhất một câu kết sau khi tra cứu.
       
       THÔNG TIN NGỮ CẢNH:
+      - ${getVietnamTimeString()}
       - OWNER_ID: "${ownerId}"
       - CONTEXT_IMAGES: ${contextImageUrls.length} ảnh trong phiên làm việc.`;
 
