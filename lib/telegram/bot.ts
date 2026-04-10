@@ -228,7 +228,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       // 2. Standard Text Reply with Robust HTML Sanitation
       const rawText =
         response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
-      const sanitizedText = rawText
+      let sanitizedText = rawText
         .replace(
           /<\/?(ul|ol|div|p|h[1-6]|table|tr|td|th|thead|tbody|span)\s*\/?>/gi,
           "\n",
@@ -236,12 +236,17 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
         .replace(/<li\s*\/?>/gi, "• ") // <li> → bullet
         .replace(/<\/li>/gi, "\n") // </li> → newline
         .replace(/<br\s*\/?>/gi, "\n") // <br> → newline
-        .replace(/<hr\s*\/?>/gi, "\n───\n") // <hr> → separator
-        // Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
-        .replace(
-          /<\/?(?!\/?(b|strong|i|em|u|ins|s|strike|del|a|code|pre|blockquote)\b)[^>]*>/gi,
-          "",
-        )
+        .replace(/<hr\s*\/?>/gi, "\n───\n"); // <hr> → separator
+      // Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
+      // Loop to handle nested/obfuscated tags (e.g. <scr<script>ipt>)
+      const allowedTagPattern =
+        /<\/?(?!\/?(b|strong|i|em|u|ins|s|strike|del|a|code|pre|blockquote)\b)[^>]*>/gi;
+      let prev = "";
+      while (prev !== sanitizedText) {
+        prev = sanitizedText;
+        sanitizedText = sanitizedText.replace(allowedTagPattern, "");
+      }
+      sanitizedText = sanitizedText
         .replace(/\n{3,}/g, "\n\n") // Collapse excessive newlines
         .trim();
 
