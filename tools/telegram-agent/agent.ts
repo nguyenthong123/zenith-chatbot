@@ -1,364 +1,364 @@
-import * as path from "node:path";
 import { generateText, tool } from "ai";
-import * as dotenv from "dotenv";
 import { z } from "zod";
+import { google } from "@ai-sdk/google";
 import * as dbQueries from "../../lib/db/queries";
-import { generateStableUUID } from "../../lib/utils";
 import * as bizTools from "./business-tools";
+import { webSearch } from "./search-tools";
+import { generateStableUUID } from "../../lib/utils";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-
-import { DEFAULT_CHAT_MODEL } from "../../lib/ai/models";
-import { getLanguageModel } from "../../lib/ai/providers";
-
-const modelId = DEFAULT_CHAT_MODEL;
-const model = getLanguageModel(modelId);
-console.log(`Bot using stable model: ${modelId}`);
+// gemini-2.5-flash — thinking disabled via providerOptions in generateText
+const model = google("gemini-2.5-flash");
 
 export interface AgentContext {
-  chatId: string;
   telegramId: string;
+  chatId: string;
+  ownerId?: string;
   user?: any;
-  isGuest: boolean;
+  isGuest?: boolean;
+}
+
+export interface MessageAttachment {
+  url: string;
+  contentType: string;
 }
 
 export async function processMessage(
   userMessage: string,
   context: AgentContext,
-  attachments: { url: string; contentType: string }[] = [],
+  attachments: MessageAttachment[] = [],
 ) {
-  const { chatId, telegramId, user, isGuest } = context;
-  const ownerId = user?.id;
-
-  if (!ownerId) {
-    return {
-      text: "⚠️ Vui lòng đăng nhập để tiếp tục. Hãy gửi email và mật khẩu của bạn.",
-    };
-  }
-
+  const { telegramId, chatId, ownerId = telegramId, user } = context;
   const chatUUID = generateStableUUID(`tg-chat-${chatId}`);
+  const isGuest = user?.role === "guest" || !ownerId;
 
-  // 1. Fetch History from DB
-  const dbMessages = await dbQueries.getMessagesByChatId({ id: chatUUID });
-  const history: any[] = dbMessages.map((m) => {
-    const attachments = (m.attachments as any[]) || [];
-    if (attachments.length > 0) {
-      return {
-        role: m.role,
-        content: [
-          { type: "text", text: String(m.parts) },
-          ...attachments.map((a) => ({
-            type: "image",
-            image: a.url,
-          })),
-        ],
-      };
-    }
-    return {
-      role: m.role,
-      content: m.parts,
-    };
+  console.log(`\n[BOT] >>> INCOMING: "${userMessage}" | Guest: ${isGuest} | Owner: ${ownerId}`);
+
+  // 1. History Fetching & Advanced Gemini Synchronization (The Final Protocol)
+  let dbMessages: any[] = [];
+  try {
+     dbMessages = await dbQueries.getMessagesByChatId({ id: chatUUID });
+     
+     const rolePriority: Record<string, number> = { user: 0, assistant: 1, tool: 2 };
+     dbMessages.sort((a, b) => {
+       const timeA = new Date(a.createdAt).getTime();
+       const timeB = new Date(b.createdAt).getTime();
+       if (timeA !== timeB) return timeA - timeB;
+       return (rolePriority[a.role] || 0) - (rolePriority[b.role] || 0);
+     });
+  } catch (_e) {
+     console.error("[Agent] History Fetch Error:", _e);
+  }
+  
+  // NORMALIZE field names for AI SDK v6 compatibility
+  // SDK v6 requires: tool-call.input (not args), tool-result.output = { type: 'json', value: ... }
+  const normalizedMessages = dbMessages.map(m => {
+    if (!Array.isArray(m.parts)) return m;
+    const cleanParts = m.parts.map((p: any) => {
+      const np = { ...p };
+      if (p.tool_call_id && !p.toolCallId) np.toolCallId = p.tool_call_id;
+      
+      if (p.type === 'tool-call') {
+        // SDK v6 uses 'input' not 'args'
+        if (p.args && !p.input) { np.input = p.args; delete np.args; }
+      }
+      if (p.type === 'tool-result') {
+        // SDK v6 requires output = { type: 'json'|'text', value: ... }
+        const rawValue = p.result ?? p.output;
+        if (rawValue !== undefined) {
+          if (typeof rawValue === 'object' && rawValue?.type && rawValue?.value !== undefined) {
+            // Already in SDK v6 format
+            np.output = rawValue;
+          } else if (typeof rawValue === 'string') {
+            np.output = { type: 'text', value: rawValue };
+          } else {
+            np.output = { type: 'json', value: rawValue };
+          }
+        }
+        delete np.result;
+      }
+      return np;
+    });
+    return { ...m, parts: cleanParts };
   });
 
-  // 2. Add current user message with multimodal parts if attachments exist
+  const allToolCallIds = new Set<string>();
+  const allToolResultIds = new Set<string>();
+  normalizedMessages.forEach(m => {
+    if (Array.isArray(m.parts)) {
+      m.parts.forEach((p: any) => {
+        if (p.type === 'tool-call' && p.toolCallId) allToolCallIds.add(p.toolCallId);
+        if (p.type === 'tool-result' && p.toolCallId) allToolResultIds.add(p.toolCallId);
+      });
+    }
+  });
+
+  const syncToolIds = new Set([...allToolCallIds].filter(id => allToolResultIds.has(id)));
+  const orphanedCallIds = [...allToolCallIds].filter(id => !allToolResultIds.has(id));
+  const orphanedResultIds = [...allToolResultIds].filter(id => !allToolCallIds.has(id));
+  if (orphanedCallIds.length > 0 || orphanedResultIds.length > 0) {
+    console.log(`[Agent] Orphan Suppression: ${orphanedCallIds.length} orphaned calls, ${orphanedResultIds.length} orphaned results stripped`);
+  }
+
+  // Filter out any orphaned tool calls or results to keep Gemini happy
+  const cleanedMessages: any[] = normalizedMessages.map(m => {
+    const partsArray = Array.isArray(m.parts) ? m.parts : [];
+    const validParts = partsArray.filter((p: any) => {
+      if (p.type === 'tool-call' || p.type === 'tool-result') {
+        return p.toolCallId && syncToolIds.has(p.toolCallId);
+      }
+      return true;
+    });
+    return { ...m, parts: validParts };
+  }).filter(m => m.parts.length > 0);
+
+  const history: any[] = [];
+  const processedIds = new Set<string>();
+
+  cleanedMessages.forEach((m) => {
+    if (processedIds.has(m.id)) return;
+
+    if (m.role === 'assistant') {
+      const toolCallIdsInMsg = m.parts.filter((p: any) => p.type === 'tool-call').map((p: any) => p.toolCallId);
+      
+      if (toolCallIdsInMsg.length > 0) {
+        // 1. Assistant Call
+        history.push({ role: 'assistant', content: m.parts });
+        processedIds.add(m.id);
+
+        // 2. CONSOLIDATE results immediately after the call
+        const results: any[] = [];
+        cleanedMessages.forEach(im => {
+          if (processedIds.has(im.id) || im.role !== 'tool') return;
+          const matching = (Array.isArray(im.parts) ? im.parts : []).filter((p: any) => p.type === 'tool-result' && toolCallIdsInMsg.includes(p.toolCallId));
+          if (matching.length > 0) {
+            results.push(...matching);
+            // If message only contains synced results for THIS turn, mark as processed
+            const allPartsMatched = im.parts.every((p: any) => p.type === 'tool-result' && toolCallIdsInMsg.includes(p.toolCallId));
+            if (allPartsMatched) processedIds.add(im.id);
+          }
+        });
+        
+        if (results.length > 0) {
+          history.push({ role: 'tool', content: results });
+        }
+      } else {
+        history.push({ role: 'assistant', content: m.parts });
+        processedIds.add(m.id);
+      }
+    } else {
+      history.push({ role: m.role, content: m.parts });
+      processedIds.add(m.id);
+    }
+  });
+
+  // CRITICAL: Strip providerOptions (thoughtSignature) from historical parts
+  // Stale thought signatures cause Gemini to hang indefinitely on Step 1
+  history.forEach(msg => {
+    if (Array.isArray(msg.content)) {
+      msg.content = msg.content.map((p: any) => {
+        const { providerOptions, ...clean } = p;
+        return clean;
+      });
+    }
+  });
+
   const newUserMessage: any = {
     role: "user",
-    content:
-      attachments.length > 0
-        ? [
-            { type: "text", text: userMessage },
-            ...attachments.map((a) => ({
-              type: "image",
-              image: a.url,
-            })),
-          ]
+    content: attachments.length > 0
+        ? [{ type: "text", text: userMessage }, ...attachments.map((a) => ({ type: "image", image: a.url }))]
         : userMessage,
   };
 
-  const currentMessages: any[] = [...history, newUserMessage].slice(-40);
+  // === GEMINI TURN-TAKING VALIDATOR ===
+  // Gemini rules:
+  // 1. assistant(tool-call) must come after user OR tool(result)
+  // 2. tool(result) must come immediately after assistant(tool-call)
+  // 3. No two consecutive assistant messages if the second has tool-call
+  // 4. History must not start with tool or assistant(tool-call)
+  
+  const validatedHistory: any[] = [];
+  for (let i = 0; i < history.length; i++) {
+    const msg = history[i];
+    const hasToolCall = Array.isArray(msg.content) && msg.content.some((p: any) => p.type === 'tool-call');
+    const hasToolResult = Array.isArray(msg.content) && msg.content.some((p: any) => p.type === 'tool-result');
+    const prev = validatedHistory[validatedHistory.length - 1];
+    const prevRole = prev?.role;
+    const prevHasToolCall = prev && Array.isArray(prev.content) && prev.content.some((p: any) => p.type === 'tool-call');
 
-  // 3. Generate Response
-  const result = await generateText({
-    model,
-    messages: currentMessages,
-    system: `Bạn là Diamond AI - Trợ lý Kinh doanh Cấp cao và Thông minh nhất (Phiên bản Telegram). 
-    Phong cách của bạn là: Tinh tế, Chuyên nghiệp, Nhạy bén và Luôn sẵn sàng hành động.
-    
-    Người đang chat với bạn là chủ sở hữu hoặc nhân viên của hệ thống kinh doanh.
-    
-    *** THÔNG TIN NGƯỜI DÙNG HIỆN TẠI ***
-    - Hồ sơ: ${user?.name || "Khách (Guest)"}
-    - ID: ${user?.id || "N/A"}
-    - Email: ${user?.email || "Chưa có"}
-    - Vai trò: ${user?.role || "guest"}
-    - Chế độ: ${isGuest ? "GUEST MODE (Hạn chế)" : "LOGGED IN (Toàn quyền)"}
-    
-    *** HƯỚNG DẪN CHIẾN THUẬT ***
-    - OWNER_ID ĐỊNH DANH: "${ownerId}" (BẮT BUỘC sử dụng ID này cho tất cả các công tác truy xuất dữ liệu).
-    
-    *** NHIỆM VỤ TRỌNG TÂM ***
-    1. QUY TRÌNH ĐĂNG NHẬP: Nếu người dùng cung cấp Email và Mật khẩu, hãy gọi công cụ 'login' NGAY LẬP TỨC để xác thực danh tính.
-    2. QUẢN TRỊ DỮ LIỆU: Cung cấp báo cáo chính xác về doanh thu, đơn hàng và khách hàng dựa trên dữ liệu thời gian thực.
-    3. XỬ LÝ ĐA PHƯƠNG TIỆN: 
-       - Nếu nhận được ảnh vừa upload từ [HỆ THỐNG], hãy ghi nhớ link để sẵn sàng cập nhật cho sản phẩm khi được yêu cầu.
-       - Khi tra cứu sản phẩm ('productLookup'): Luôn hiển thị hình ảnh sản phẩm (nếu có) thông qua Markdown (Telegram sẽ tự động tạo preview).
-       - Nếu khách hàng muốn "xem hình" của sản phẩm vừa nhắc đến, hãy cung cấp hình ảnh của đúng sản phẩm đó một cách trực quan nhất.
-    4. GIAO TIẾP: Sử dụng Tiếng Việt chuẩn mực, lịch sự nhưng vô cùng năng động. Dùng Markdown hoặc HTML nhẹ (<b>, <code>) để làm nổi bật thông tin quan trọng.
-    5. TÀI CHÍNH: Hiển thị tiền tệ VNĐ rõ ràng (VD: 1.000.000 VNĐ).
-    6. PHẢN HỒI: Súc tích, đi thẳng vào vấn đề trừ khi cần phân tích chuyên sâu. Luôn thể hiện mình là một trợ lý đắc lực, thấu hiểu công việc kinh doanh.`,
-    tools: {
-      login: tool({
-        description:
-          "Đăng nhập bằng email và mật khẩu để liên kết với Telegram.",
-        inputSchema: z.object({
-          email: z.string().email().describe("Email đăng nhập"),
-          password: z.string().describe("Mật khẩu"),
-        }),
-        execute: async ({ email, password }: any) => {
-          return await (bizTools.loginTool.execute as any)({
-            email,
-            password,
-            telegramId,
-            chatId,
-          });
-        },
-      }),
-      logout: tool({
-        description: "Đăng xuất khỏi tài khoản hiện tại.",
-        inputSchema: z.object({}),
-        execute: async () => {
-          return await (bizTools.logoutTool.execute as any)({ telegramId });
-        },
-      }),
-      switchAccount: tool({
-        description: "Chuyển giữa Guest và tài khoản đã liên kết.",
-        inputSchema: z.object({
-          toGuest: z
-            .boolean()
-            .describe("True = Guest, False = Tài khoản riêng"),
-        }),
-        execute: async ({ toGuest }: any) => {
-          return await (bizTools.switchAccountTool.execute as any)({
-            toGuest,
-            telegramId,
-          });
-        },
-      }),
-      productLookup: tool({
-        description: bizTools.productLookup.description,
-        inputSchema: z.object({
-          query: z.string().describe("Tên sản phẩm"),
-        }),
-        execute: async ({ query }: any) => {
-          return await (bizTools.productLookup.execute as any)({
-            query,
-            ownerId,
-          });
-        },
-      }),
-      orderLookup: tool({
-        description: bizTools.orderLookup.description,
-        inputSchema: z.object({
-          limit: z.number().optional().default(5),
-        }),
-        execute: async ({ limit }: any) => {
-          return await (bizTools.orderLookup.execute as any)({
-            userId: ownerId,
-            limit,
-          });
-        },
-      }),
-      saveProduct: tool({
-        description: bizTools.saveProductTool.description,
-        inputSchema: z.object({
-          name: z.string(),
-          priceSell: z.number().optional(),
-          imageUrls: z.array(z.string()).optional(),
-        }),
-        execute: async (args: any) => {
-          return await (bizTools.saveProductTool.execute as any)({
-            ...args,
-            ownerId,
-          });
-        },
-      }),
-      financialReport: tool({
-        description: bizTools.getFinancialSummaryTool.description,
-        inputSchema: z.object({}),
-        execute: async () => {
-          return await (bizTools.getFinancialSummaryTool.execute as any)({
-            userId: ownerId,
-          });
-        },
-      }),
-      getRecentProducts: tool({
-        description: bizTools.getRecentProductsTool.description,
-        inputSchema: z.object({
-          limit: z.number().optional().default(5),
-        }),
-        execute: async ({ limit }: any) => {
-          return await (bizTools.getRecentProductsTool.execute as any)({
-            userId: ownerId,
-            limit,
-          });
-        },
-      }),
-      customerLookup: tool({
-        description: bizTools.customerLookup.description,
-        inputSchema: z.object({
-          query: z.string().optional(),
-          limit: z.number().optional().default(5),
-        }),
-        execute: async (args: any) => {
-          return await (bizTools.customerLookup.execute as any)({
-            ...args,
-            userId: ownerId,
-          });
-        },
-      }),
-      cashBookLookup: tool({
-        description: bizTools.cashBookLookup.description,
-        inputSchema: z.object({
-          limit: z.number().optional().default(5),
-        }),
-        execute: async ({ limit }: any) => {
-          return await (bizTools.cashBookLookup.execute as any)({
-            userId: ownerId,
-            limit,
-          });
-        },
-      }),
-      updateProductImage: tool({
-        description:
-          "Dùng để cập nhật hoặc thêm hình ảnh mới cho một sản phẩm hiện có. SỬ DỤNG TOOL NÀY khi người dùng gửi ảnh/các ảnh và yêu cầu cập nhật cho sản phẩm cụ thể.",
-        inputSchema: z.object({
-          productName: z
-            .string()
-            .describe("Tên sản phẩm (có thể lấy một phần tên)"),
-          imageUrls: z.array(z.string()).describe("Danh sách Link ảnh mới"),
-        }),
-        execute: async (args: any) => {
-          console.log(
-            `[Agent] Calling updateProductImage for ${args.productName} with ${args.imageUrls?.length} images`,
-          );
-          return await (bizTools.updateProductImageTool.execute as any)({
-            ...args,
-            ownerId,
-          });
-        },
-      }),
-    },
-    maxSteps: 10,
-    onStepFinish: ({
-      text,
-      toolCalls,
-      toolResults,
-      finishReason,
-      stepNumber,
-    }: any) => {
-      console.log(`Step ${stepNumber} Finished, reason: ${finishReason}`);
-      if (toolCalls && toolCalls.length > 0) {
-        console.log(
-          `Tool Calls: ${toolCalls.map((tc: any) => tc.toolName).join(", ")}`,
-        );
+    if (msg.role === 'assistant' && hasToolCall) {
+      // Rule 1: assistant(tool-call) only after user or tool
+      if (prevRole === 'user' || prevRole === 'tool') {
+        validatedHistory.push(msg);
       }
-      if (toolResults && toolResults.length > 0) {
-        console.log(`Tool Results: ${toolResults.length} items`);
+      // else: skip this tool-call turn — it would violate Gemini rules
+    } else if (msg.role === 'tool') {
+      // Rule 2: tool only after assistant(tool-call)
+      if (prevRole === 'assistant' && prevHasToolCall) {
+        validatedHistory.push(msg);
       }
-      if (text) {
-        console.log(`Step Text: ${text.substring(0, 100)}...`);
+      // else: orphaned tool result — skip
+    } else if (msg.role === 'assistant') {
+      // Plain assistant text — merge consecutive assistants
+      if (prevRole === 'assistant' && !prevHasToolCall) {
+        // Merge into previous assistant message
+        const prevContent = Array.isArray(prev.content) ? prev.content : [{ type: 'text', text: prev.content }];
+        const curContent = Array.isArray(msg.content) ? msg.content : [{ type: 'text', text: msg.content }];
+        prev.content = [...prevContent, ...curContent];
+      } else {
+        validatedHistory.push({ ...msg });
       }
-    },
-  } as any);
+    } else {
+      // user messages
+      validatedHistory.push(msg);
+    }
+  }
 
-  console.log(
-    `Generation Finished. Total Steps: ${result.steps.length}, Final Text: ${result.text ? "YES" : "NO"}`,
-  );
+  // Take last 4 turns only — large history causes Gemini 2.5-flash to hang on Step 1
+  let historySlice = validatedHistory.slice(-4);
+  while (historySlice.length > 0 && (historySlice[0].role === 'tool' || 
+    (historySlice[0].role === 'assistant' && Array.isArray(historySlice[0].content) && historySlice[0].content.some((p: any) => p.type === 'tool-call')))) {
+    historySlice.shift();
+  }
+  const currentMessages: any[] = [...historySlice, newUserMessage];
 
-  // 4. Persistence Logic
+  const contextImageUrls: string[] = [];
+  history.slice(-2).forEach(msg => {
+    if (Array.isArray(msg.content)) {
+      msg.content.forEach((p: any) => { if (p.type === 'image' && p.image) contextImageUrls.push(p.image); });
+    }
+  });
+  attachments.forEach(a => contextImageUrls.push(a.url));
+
+  // 3. Generate Response — Manual 2-pass to avoid SDK multi-step hang with gemini-2.5-flash
+  const systemPrompt = `Bạn là Diamond AI - Trợ lý Kinh doanh chuyên nghiệp.
+      
+      *** QUY TẮC CỐ ĐỊNH ***
+      1. TRA CỨU & HIỂN THỊ (FRONTEND): Khi khách muốn XEM sản phẩm hoặc ảnh, hãy gọi 'productLookup'. Tool này sẽ tự động trả về thông tin chi tiết và link ảnh. Bạn chỉ cần tóm tắt lại thông tin văn bản. Việc gửi ảnh thật sẽ do hệ thống tự động xử lý dựa trên kết quả Tool.
+      2. TÌM KIẾM INTERNET: Nếu khách hỏi về thông tin bên ngoài (giá sắt thép, tin tức, thời tiết, kiến thức chung) mà Database không có, hãy dùng 'webSearch'.
+      3. LƯU TRỮ & CẬP NHẬT (BACKEND): Khi khách muốn LƯU hoặc CẬP NHẬT sản phẩm/ảnh, hãy gọi 'updateProductImage' hoặc 'saveProduct'. Các Tool này chỉ làm nhiệm vụ ghi vào Database. Sau khi hoàn tất, hãy thông báo xác nhận thành công cho khách.
+      4. NGÔN NGỮ & ĐỊNH DẠNG: Trả lời bằng tiếng Việt, lịch sự. Chỉ sử dụng các thẻ HTML sau: <b>, <i>, <a>, <code>, <blockquote>. TUYỆT ĐỐI KHÔNG dùng Markdown, KHÔNG dùng thẻ <ul>, <li>, <p> hay <br>.
+      5. KHÔNG TRẢ LỜI RỖNG: Luôn viết ít nhất một câu kết sau khi tra cứu.
+      
+      THÔNG TIN NGỮ CẢNH:
+      - OWNER_ID: "${ownerId}"
+      - CONTEXT_IMAGES: ${contextImageUrls.length} ảnh trong phiên làm việc.`;
+
+  const allTools = {
+    productLookup: tool({
+      description: "TRA CỨU VÀ HIỂN THỊ: Tìm kiếm sản phẩm trong kho.",
+      inputSchema: z.object({ query: z.string().describe("Tên hoặc SKU sản phẩm") }),
+      execute: async ({ query }) => {
+        const products = await dbQueries.getProductsByNameAndUser({ name: query, userId: ownerId });
+        if (!products || products.length === 0) return { success: false, message: "Không tìm thấy sản phẩm." };
+        const p = products[0];
+        const img = p.imageUrls ? p.imageUrls.split(",")[0].trim() : null;
+        return { success: true, message: `📦 Sản phẩm: <b>${p.name}</b>\n💰 Giá: ${p.priceSell?.toLocaleString()} VNĐ\n📉 Tồn kho: ${p.stock}`, photoUrl: img };
+      },
+    }),
+    webSearch,
+    updateProductImage: tool({
+      description: "LƯU TRỮ (BACKEND): Cập nhật ảnh cho sản phẩm.",
+      inputSchema: z.object({ productName: z.string(), imageUrls: z.array(z.string()).optional() }),
+      execute: async (args: any) => {
+        if (!args.imageUrls?.length && contextImageUrls.length > 0) args.imageUrls = [contextImageUrls[contextImageUrls.length - 1]];
+        return { success: true, message: await (bizTools.updateProductImageTool.execute as any)({ ...args, ownerId }) };
+      },
+    }),
+    saveProduct: tool({
+      description: "LƯU TRỮ (BACKEND): Lưu sản phẩm mới.",
+      inputSchema: z.object({ name: z.string(), priceSell: z.number().optional(), imageUrls: z.array(z.string()).optional() }),
+      execute: async (args: any) => {
+        if (!args.imageUrls?.length && contextImageUrls.length > 0) args.imageUrls = [contextImageUrls[contextImageUrls.length - 1]];
+        return { success: true, message: await (bizTools.saveProductTool.execute as any)({ ...args, ownerId }) };
+      },
+    }),
+  };
+
+  let result: any;
   try {
-    // Ensure chat exists
-    await dbQueries.saveChat({
-      id: chatUUID,
-      userId: ownerId,
-      title: userMessage.slice(0, 50),
-      visibility: "private",
-    });
+    // Pass 1: Gemini decides what to do — tools have NO execute so SDK won't auto-run them
+    const declarationTools = {
+      productLookup: tool({ description: "TRA CỨU sản phẩm trong kho.", inputSchema: z.object({ query: z.string() }) }),
+      webSearch: tool({ description: "Tìm kiếm thông tin trên Internet.", inputSchema: z.object({ query: z.string() }) }),
+      updateProductImage: tool({ description: "Cập nhật ảnh sản phẩm.", inputSchema: z.object({ productName: z.string(), imageUrls: z.array(z.string()).optional() }) }),
+      saveProduct: tool({ description: "Lưu sản phẩm mới.", inputSchema: z.object({ name: z.string(), priceSell: z.number().optional(), imageUrls: z.array(z.string()).optional() }) }),
+    };
 
-    // Save User Message
-    await dbQueries.saveMessages({
-      messages: [
-        {
-          id: generateStableUUID(`${chatUUID}-user-${Date.now()}`),
-          chatId: chatUUID,
-          role: "user",
-          parts: userMessage,
-          attachments: attachments,
-          createdAt: new Date(),
-        },
-      ],
+    console.log(`[Agent] Pass 1: Sending ${currentMessages.length} messages to Gemini`);
+    result = await generateText({
+      model, system: systemPrompt, messages: currentMessages, tools: declarationTools,
+      providerOptions: { google: { thinkingConfig: { thinkingBudget: 1024 } } },
     });
+    console.log(`[Agent] Pass 1 done | Text: ${result.text?.length || 0} chars | ToolCalls: ${result.toolCalls?.length || 0}`);
 
-    // Save Assistant Responses and Tool Results
-    // The result from generateText has response.messages
-    const messagesToSave = result.response.messages;
-    if (messagesToSave.length > 0) {
+    // If Gemini wants to call tools, execute them manually
+    if (result.toolCalls && result.toolCalls.length > 0) {
+      const toolCallParts: any[] = [];
+      const toolResultParts: any[] = [];
+
+      for (const tc of result.toolCalls) {
+        const args = tc.args || (tc as any).input || {};
+        console.log(`[Agent] Executing tool: ${tc.toolName}`, JSON.stringify(args).slice(0, 200));
+        
+        let toolOutput: any;
+        const toolOpts = { toolCallId: tc.toolCallId, messages: currentMessages } as any;
+        if (tc.toolName === 'webSearch') {
+          toolOutput = await allTools.webSearch.execute!(args, toolOpts);
+        } else if (tc.toolName === 'productLookup') {
+          toolOutput = await allTools.productLookup.execute!(args, toolOpts);
+        } else if (tc.toolName === 'updateProductImage') {
+          toolOutput = await allTools.updateProductImage.execute!(args, toolOpts);
+        } else if (tc.toolName === 'saveProduct') {
+          toolOutput = await allTools.saveProduct.execute!(args, toolOpts);
+        } else {
+          toolOutput = { error: `Unknown tool: ${tc.toolName}` };
+        }
+        console.log(`[Agent] Tool result:`, JSON.stringify(toolOutput).slice(0, 200));
+
+        toolCallParts.push({ type: 'tool-call' as const, toolCallId: tc.toolCallId, toolName: tc.toolName, input: args });
+        toolResultParts.push({ type: 'tool-result' as const, toolCallId: tc.toolCallId, toolName: tc.toolName, 
+          output: typeof toolOutput === 'string' ? { type: 'text' as const, value: toolOutput } : { type: 'json' as const, value: toolOutput } 
+        });
+      }
+
+      // Pass 2: Fresh call with tool results — no thinking to avoid hang
+      const pass2Messages = [
+        ...currentMessages,
+        { role: 'assistant' as const, content: toolCallParts },
+        { role: 'tool' as const, content: toolResultParts },
+      ];
+      console.log(`[Agent] Pass 2: Sending ${pass2Messages.length} messages`);
+      result = await generateText({
+        model, system: systemPrompt, messages: pass2Messages,
+        providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+      });
+      console.log(`[Agent] Pass 2 done | Text: ${result.text?.length || 0} chars`);
+    }
+  } catch (e: any) {
+    console.error(`[Agent] CRITICAL ERROR during Generation:`, e);
+    throw e;
+  }
+
+  // 4. Persistence
+  try {
+    if (!isGuest && result) {
+      await dbQueries.saveChat({ id: chatUUID, userId: ownerId, title: userMessage.slice(0, 50) || "Telegram Chat", visibility: "private" });
       await dbQueries.saveMessages({
-        messages: messagesToSave.map((m, idx) => ({
-          id: generateStableUUID(`${chatUUID}-resp-${Date.now()}-${idx}`),
-          chatId: chatUUID,
-          role: m.role as any,
-          parts: m.content as any,
-          attachments: [],
-          createdAt: new Date(),
-        })),
+        messages: [
+          { id: generateStableUUID(`${chatUUID}-user-${Date.now()}`), chatId: chatUUID, role: "user", parts: newUserMessage.content as any, attachments: [] },
+          ...result.response.messages.map((m: any, idx: number) => ({
+            id: generateStableUUID(`${chatUUID}-resp-${Date.now()}-${idx}`),
+            chatId: chatUUID,
+            role: m.role as "assistant",
+            parts: m.content as any,
+            attachments: [],
+          })),
+        ],
       });
     }
-  } catch (_err) {
-    // Persistence errors are swallowed to maintain user experience
+  } catch (_e: any) {
+    console.warn("[Agent] Persistence skipped:", _e.message);
   }
 
-  let responseText = result.text || "";
-
-  // If result.text is empty, reconstruct from steps
-  if (!responseText) {
-    responseText = result.steps
-      .map((step) => step.text)
-      .filter(Boolean)
-      .join("\n\n");
-  }
-
-  // Debug tool results
-  const allToolResults = result.steps.flatMap((s) => s.toolResults);
-  if (allToolResults.length > 0) {
-    console.log(`Total tool results: ${allToolResults.length}`);
-    allToolResults.forEach((tr, i) => {
-      console.log(
-        `Result ${i} (${tr.toolName}):`,
-        JSON.stringify(tr.output).substring(0, 100),
-      );
-    });
-  }
-
-  // If still no text, fallback to the last tool result message if available
-  if (!responseText && allToolResults.length > 0) {
-    const lastResult = allToolResults[allToolResults.length - 1].output;
-    if (typeof lastResult === "string") {
-      responseText = lastResult;
-    } else if (
-      lastResult &&
-      typeof lastResult === "object" &&
-      (lastResult as any).message
-    ) {
-      responseText = (lastResult as any).message;
-    } else {
-      responseText = "✅ Đã xử lý yêu cầu của bạn thành công.";
-    }
-  }
-
-  return {
-    text:
-      responseText ||
-      "⚠️ Tôi đã nhận được yêu cầu nhưng không thể tạo ra phản hồi văn bản. Vui lòng thử lại.",
-  };
+  return result;
 }

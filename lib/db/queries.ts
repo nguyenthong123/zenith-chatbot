@@ -233,13 +233,16 @@ export async function saveChat({
       // but we add a clearer error message.
     }
 
-    return await db.insert(chat).values({
-      id: chatUUID,
-      createdAt: new Date(),
-      userId: userUUID,
-      title,
-      visibility,
-    });
+    return await db
+      .insert(chat)
+      .values({
+        id: chatUUID,
+        createdAt: new Date(),
+        userId: userUUID,
+        title,
+        visibility,
+      })
+      .onConflictDoNothing();
   } catch (error) {
     console.error("[DB Error: saveChat]:", error);
     throw new ChatbotError(
@@ -1030,10 +1033,11 @@ export async function upsertProduct(data: {
         .map((i: string) => i.trim())
         .filter((i: string) => i.startsWith("http")) || [];
 
-    // Merge and unique
-    const allImages = Array.from(new Set([...oldImages, ...newImages]))
-      .filter(Boolean)
-      .join(", ");
+    // In the current context of this AI agent, providing new images usually means 
+    // replacing the old ones or setting the definitive list.
+    const allImages = newImages.length > 0 
+      ? newImages.join(", ") 
+      : p.imageUrls;
 
     const result = await db
       .update(product)
@@ -1204,5 +1208,47 @@ export async function upsertZaloConfig(data: {
       "bad_request:database",
       "Failed to save Zalo configuration",
     );
+  }
+}
+export async function upsertPayment(data: {
+  id: string;
+  amount: number;
+  customerId?: string;
+  customerName?: string;
+  date?: string;
+  paymentMethod?: string;
+  proofImage?: string;
+  note?: string;
+  ownerId: string;
+  ownerEmail?: string;
+}) {
+  try {
+    const existing = await db
+      .select()
+      .from(payment)
+      .where(eq(payment.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return await db
+        .update(payment)
+        .set({
+          ...data,
+          amount: data.amount, // Ensure it's treated as number/bigint per schema
+        })
+        .where(eq(payment.id, data.id))
+        .returning();
+    }
+
+    return await db
+      .insert(payment)
+      .values({
+        ...data,
+        createdAt: new Date(),
+      })
+      .returning();
+  } catch (error) {
+    console.error("Failed to upsert payment:", error);
+    throw new ChatbotError("bad_request:database", "Failed to save payment");
   }
 }

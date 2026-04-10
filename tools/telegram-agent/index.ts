@@ -88,6 +88,15 @@ bot.command("login", async (ctx: any) => {
   }
 });
 
+bot.command("logout", async (ctx: any) => {
+  const res = await tgQueries.unlinkTelegramAccount(ctx.state.telegramId);
+  if (res.success) {
+    ctx.reply("👋 Đã đăng xuất và hủy liên kết tài khoản thành công.");
+  } else {
+    ctx.reply(`❌ Lỗi: ${res.message}`);
+  }
+});
+
 bot.command("guest", async (ctx: any) => {
   const res = await tgQueries.switchTelegramIdentity(
     ctx.state.telegramId,

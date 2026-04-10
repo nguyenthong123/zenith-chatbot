@@ -327,3 +327,31 @@ export const updateProductImageTool = tool({
     }
   },
 });
+
+export const savePaymentTool = tool({
+  description: "Lưu thông tin phiếu thu/thanh toán (kèm theo ảnh chứng từ nếu có).",
+  inputSchema: z.object({
+    amount: z.number().describe("Số tiền thanh toán"),
+    customerName: z.string().optional().describe("Tên khách hàng"),
+    date: z.string().optional().describe("Ngày thanh toán (YYYY-MM-DD)"),
+    paymentMethod: z.string().optional().describe("Phương thức (Chuyển khoản, Tiền mặt...)"),
+    proofImage: z.string().optional().describe("Link ảnh chứng từ/bill"),
+    note: z.string().optional().describe("Ghi chú thêm"),
+    ownerId: z.string().describe("ID người sở hữu (Nội bộ)"),
+  }),
+  execute: async (params) => {
+    if (!params.ownerId) return "❌ Lỗi: Bạn chưa đăng nhập để lưu phiếu thu.";
+
+    const id = `pay-${Date.now()}`;
+    const result = await dbQueries.upsertPayment({
+      ...params,
+      id,
+      date: params.date || new Date().toISOString().split("T")[0],
+    });
+
+    const saved = Array.isArray(result) ? result[0] : result;
+    return saved
+      ? `✅ Đã lưu phiếu thu: <b>${(saved.amount || 0).toLocaleString()} VNĐ</b> cho khách hàng <b>${saved.customerName || "N/A"}</b>.`
+      : "❌ Lỗi khi lưu phiếu thu.";
+  },
+});

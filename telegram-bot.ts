@@ -23,8 +23,17 @@ async function startupCheck() {
     console.log("Checking database connection...");
     await db.execute(sql`SELECT 1`);
     console.log("✅ Database connected successfully.");
+    
+    // ENSURE WEBHOOK IS DELETED BEFORE POLLING
+    console.log("Cleaning connection (Deleting Webhook)...");
+    await bot.telegram.deleteWebhook();
 
-    bot.launch();
+    setInterval(() => console.log('💎 HEARTBEAT: Diamond AI alive'), 30000);
+    
+    bot.launch().catch((err) => {
+      console.error("❌ Bot launch failed:", err);
+      process.exit(1);
+    });
     console.log("🚀 Bot is live and listening for messages.");
   } catch (error) {
     console.error("❌ CRITICAL: Database connection failed at startup!");
