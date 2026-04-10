@@ -369,15 +369,26 @@ export async function processMessage(
   };
 
   // Helper: wrap a promise with a timeout to prevent indefinite Gemini hangs
-  const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+  const withTimeout = <T>(
+    promise: Promise<T>,
+    ms: number,
+    label: string,
+  ): Promise<T> => {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(
-        () => reject(new Error(`[Agent] ${label} timed out after ${ms / 1000}s`)),
+        () =>
+          reject(new Error(`[Agent] ${label} timed out after ${ms / 1000}s`)),
         ms,
       );
       promise.then(
-        (v) => { clearTimeout(timer); resolve(v); },
-        (e) => { clearTimeout(timer); reject(e); },
+        (v) => {
+          clearTimeout(timer);
+          resolve(v);
+        },
+        (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
       );
     });
   };
@@ -420,7 +431,9 @@ export async function processMessage(
         system: systemPrompt,
         messages: currentMessages,
         tools: declarationTools,
-        providerOptions: { google: { thinkingConfig: { thinkingBudget: 1024 } } },
+        providerOptions: {
+          google: { thinkingConfig: { thinkingBudget: 1024 } },
+        },
       }),
       PASS_1_TIMEOUT_MS,
       "Pass 1",
@@ -494,7 +507,9 @@ export async function processMessage(
           model,
           system: systemPrompt,
           messages: pass2Messages,
-          providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+          providerOptions: {
+            google: { thinkingConfig: { thinkingBudget: 0 } },
+          },
         }),
         PASS_2_TIMEOUT_MS,
         "Pass 2",
