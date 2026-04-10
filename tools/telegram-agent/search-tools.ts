@@ -6,7 +6,8 @@ import { z } from "zod";
  * Documentation: https://docs.tavily.com/docs/tavily-api/introduction
  */
 export const webSearch = tool({
-  description: "Tìm kiếm thông tin trên Internet (tin tức, giá thị trường, kiến thức tổng hợp).",
+  description:
+    "Tìm kiếm thông tin trên Internet (tin tức, giá thị trường, kiến thức tổng hợp).",
   inputSchema: z.object({
     query: z.string().describe("Từ khóa tìm kiếm"),
   }),
@@ -46,11 +47,11 @@ export const webSearch = tool({
         results
           .map((r: any, i: number) => {
             // Strip markdown images and truncate to prevent Gemini thinking timeout
-            let content = (r.content || "")
-              .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, "")  // remove markdown images
-              .replace(/!\[.*?\]\(.*?\)/g, "")               // remove inline images
-              .replace(/\[Image \d+:.*?\]/g, "")             // remove image refs
-              .replace(/\s+/g, " ")                          // normalize whitespace
+            const content = (r.content || "")
+              .replace(/\[!\[.*?\]\(.*?\)\]\(.*?\)/g, "") // remove markdown images
+              .replace(/!\[.*?\]\(.*?\)/g, "") // remove inline images
+              .replace(/\[Image \d+:.*?\]/g, "") // remove image refs
+              .replace(/\s+/g, " ") // normalize whitespace
               .trim()
               .slice(0, 300);
             return `${i + 1}. <b>${r.title}</b>\n📝 ${content}\n🔗 <a href="${r.url}">Nguồn</a>`;

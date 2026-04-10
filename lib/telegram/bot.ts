@@ -1,5 +1,8 @@
 import type { Context, Telegraf } from "telegraf";
-import { type AgentContext, processMessage } from "../../tools/telegram-agent/agent";
+import {
+  type AgentContext,
+  processMessage,
+} from "../../tools/telegram-agent/agent";
 import cloudinary from "../cloudinary";
 import * as tgQueries from "../db/telegram-queries";
 
@@ -11,8 +14,10 @@ export function setupBot(bot: Telegraf<Context>) {
     const telegramId = ctx.from.id.toString();
     const chatId = ctx.chat?.id.toString() || telegramId;
     const username = ctx.from.username || ctx.from.first_name;
-    
-    console.log(`[Telegraf] INCOMING: From ${username} (${telegramId}) in Chat ${chatId}`);
+
+    console.log(
+      `[Telegraf] INCOMING: From ${username} (${telegramId}) in Chat ${chatId}`,
+    );
 
     try {
       const result = await tgQueries.getActiveTelegramUser(telegramId);
@@ -116,12 +121,16 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       };
 
       // Gửi thông báo kèm theo ảnh thực tế dưới dạng attachment để AI có thể "nhìn" thấy
-      const aiMsg = "[HỆ THỐNG: Người dùng vừa gửi một ảnh]"; 
+      const aiMsg = "[HỆ THỐNG: Người dùng vừa gửi một ảnh]";
       const response = await processMessage(aiMsg, context, [
         { url: uploadRes.secure_url, contentType: "image/jpeg" },
       ]);
 
-      await ctx.reply(response.text || "💎 [Diamond AI] Đang xử lý dữ liệu hình ảnh... vui lòng nhắn lại sau 5 giây nếu không thấy phản hồi.", { parse_mode: "HTML" });
+      await ctx.reply(
+        response.text ||
+          "💎 [Diamond AI] Đang xử lý dữ liệu hình ảnh... vui lòng nhắn lại sau 5 giây nếu không thấy phản hồi.",
+        { parse_mode: "HTML" },
+      );
     } catch (error: any) {
       console.error("Photo Error:", error);
       ctx.reply("Lỗi khi xử lý hình ảnh.");
@@ -134,7 +143,9 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
     if (userMessage.startsWith("/")) return; // Skip commands
 
     try {
-      console.log(`[Telegraf] Message from ${ctx.from?.username || ctx.from?.first_name}: "${userMessage}"`);
+      console.log(
+        `[Telegraf] Message from ${ctx.from?.username || ctx.from?.first_name}: "${userMessage}"`,
+      );
       await ctx.sendChatAction("typing");
 
       const context: AgentContext = {
@@ -180,14 +191,28 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       // SDK v6: output = { type: 'json', value: { photoUrl: ... } }
       if (response && response.response && response.response.messages) {
         for (const msg of response.response.messages) {
-          if ((msg.role === "tool" || msg.role === "assistant") && Array.isArray(msg.content)) {
+          if (
+            (msg.role === "tool" || msg.role === "assistant") &&
+            Array.isArray(msg.content)
+          ) {
             for (const part of msg.content) {
               if (part.type === "tool-result") {
                 // SDK v6 structured: output.value contains the actual data
                 const rawOut = (part as any).output ?? (part as any).result;
-                const out = (rawOut && typeof rawOut === 'object' && rawOut.value) ? rawOut.value : rawOut;
-                if (out && typeof out === "object" && out.photoUrl && out.photoUrl !== "N/A" && out.photoUrl.startsWith("http")) {
-                  console.log(`[Bot] Auto-delivering photo from tool result: ${out.photoUrl}`);
+                const out =
+                  rawOut && typeof rawOut === "object" && rawOut.value
+                    ? rawOut.value
+                    : rawOut;
+                if (
+                  out &&
+                  typeof out === "object" &&
+                  out.photoUrl &&
+                  out.photoUrl !== "N/A" &&
+                  out.photoUrl.startsWith("http")
+                ) {
+                  console.log(
+                    `[Bot] Auto-delivering photo from tool result: ${out.photoUrl}`,
+                  );
                   try {
                     await ctx.replyWithPhoto(out.photoUrl);
                   } catch (photoErr) {
@@ -201,23 +226,33 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       }
 
       // 2. Standard Text Reply with Robust HTML Sanitation
-      const rawText = response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
+      const rawText =
+        response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
       const sanitizedText = rawText
-        .replace(/<\/?(ul|ol|div|p|h[1-6]|table|tr|td|th|thead|tbody|span)\s*\/?>/gi, "\n")  // Block-level → newlines
-        .replace(/<li\s*\/?>/gi, "• ")      // <li> → bullet
-        .replace(/<\/li>/gi, "\n")           // </li> → newline
-        .replace(/<br\s*\/?>/gi, "\n")       // <br> → newline
-        .replace(/<hr\s*\/?>/gi, "\n───\n")  // <hr> → separator
+        .replace(
+          /<\/?(ul|ol|div|p|h[1-6]|table|tr|td|th|thead|tbody|span)\s*\/?>/gi,
+          "\n",
+        ) // Block-level → newlines
+        .replace(/<li\s*\/?>/gi, "• ") // <li> → bullet
+        .replace(/<\/li>/gi, "\n") // </li> → newline
+        .replace(/<br\s*\/?>/gi, "\n") // <br> → newline
+        .replace(/<hr\s*\/?>/gi, "\n───\n") // <hr> → separator
         // Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
-        .replace(/<\/?(?!\/?(b|strong|i|em|u|ins|s|strike|del|a|code|pre|blockquote)\b)[^>]*>/gi, "")
-        .replace(/\n{3,}/g, "\n\n")          // Collapse excessive newlines
+        .replace(
+          /<\/?(?!\/?(b|strong|i|em|u|ins|s|strike|del|a|code|pre|blockquote)\b)[^>]*>/gi,
+          "",
+        )
+        .replace(/\n{3,}/g, "\n\n") // Collapse excessive newlines
         .trim();
 
       try {
         await ctx.reply(sanitizedText, { parse_mode: "HTML" });
       } catch (htmlErr: any) {
         // Fallback: strip ALL HTML and send as plain text
-        console.warn("[Bot] HTML parse failed, falling back to plain text:", htmlErr.message);
+        console.warn(
+          "[Bot] HTML parse failed, falling back to plain text:",
+          htmlErr.message,
+        );
         const plainText = sanitizedText.replace(/<[^>]*>/g, "").trim();
         await ctx.reply(plainText || "💎 Đã xử lý yêu cầu.");
       }

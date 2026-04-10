@@ -329,12 +329,16 @@ export const updateProductImageTool = tool({
 });
 
 export const savePaymentTool = tool({
-  description: "Lưu thông tin phiếu thu/thanh toán (kèm theo ảnh chứng từ nếu có).",
+  description:
+    "Lưu thông tin phiếu thu/thanh toán (kèm theo ảnh chứng từ nếu có).",
   inputSchema: z.object({
     amount: z.number().describe("Số tiền thanh toán"),
     customerName: z.string().optional().describe("Tên khách hàng"),
     date: z.string().optional().describe("Ngày thanh toán (YYYY-MM-DD)"),
-    paymentMethod: z.string().optional().describe("Phương thức (Chuyển khoản, Tiền mặt...)"),
+    paymentMethod: z
+      .string()
+      .optional()
+      .describe("Phương thức (Chuyển khoản, Tiền mặt...)"),
     proofImage: z.string().optional().describe("Link ảnh chứng từ/bill"),
     note: z.string().optional().describe("Ghi chú thêm"),
     ownerId: z.string().describe("ID người sở hữu (Nội bộ)"),

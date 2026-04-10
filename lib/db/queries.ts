@@ -1033,11 +1033,9 @@ export async function upsertProduct(data: {
         .map((i: string) => i.trim())
         .filter((i: string) => i.startsWith("http")) || [];
 
-    // In the current context of this AI agent, providing new images usually means 
+    // In the current context of this AI agent, providing new images usually means
     // replacing the old ones or setting the definitive list.
-    const allImages = newImages.length > 0 
-      ? newImages.join(", ") 
-      : p.imageUrls;
+    const allImages = newImages.length > 0 ? newImages.join(", ") : p.imageUrls;
 
     const result = await db
       .update(product)

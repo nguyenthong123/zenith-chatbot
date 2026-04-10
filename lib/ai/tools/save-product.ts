@@ -36,7 +36,8 @@ export const getSaveProductTool = (userId: string, userEmail?: string) =>
         if (imageUrls && imageUrls.length > 0) {
           const storageConfigured =
             !!(
-              process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET
+              process.env.CLOUDINARY_API_KEY &&
+              process.env.CLOUDINARY_API_SECRET
             ) ||
             !!process.env.BLOB_READ_WRITE_TOKEN ||
             !!process.env.IMGBB_API_KEY;
@@ -63,7 +64,8 @@ export const getSaveProductTool = (userId: string, userEmail?: string) =>
                   timeout: 10000,
                 });
 
-                contentType = downloadRes.headers["content-type"] || "image/png";
+                contentType =
+                  downloadRes.headers["content-type"] || "image/png";
                 const buffer = Buffer.from(downloadRes.data);
                 base64 = `data:${contentType};base64,${buffer.toString("base64")}`;
               }
