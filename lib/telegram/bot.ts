@@ -244,15 +244,11 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
         .replace(/<\/li>/gi, "\n") // </li> → newline
         .replace(/<br(\s[^>]*)?\/?>/gi, "\n") // <br> → newline
         .replace(/<hr(\s[^>]*)?\/?>/gi, "\n───\n") // <hr> → separator
-        .replace(/<img[^>]*>/gi, "") // Strip images
-        .replace(
-          /<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi,
-          "",
-        ); // Strip dangerous/unsupported tags
+        .replace(/<img[^>]*>/gi, ""); // Strip images
 
       // Step C: Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
       // Telegram supports: b, strong, i, em, u, ins, s, strike, del, a, code, pre, blockquote
-      // Loop to handle nested/obfuscated tags (e.g. <scr<script>ipt>)
+      // Loop to handle nested/obfuscated tags (e.g. <scr<script>ipt>) and dangerous tags
       const allowedTagPattern =
         /<\/?(?!(b|strong|i|em|u|ins|s|strike|del|a|code|pre|blockquote)\b)[a-zA-Z][^>]*>/gi;
       let prev = "";
