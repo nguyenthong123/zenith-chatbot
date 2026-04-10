@@ -9,6 +9,10 @@ import { webSearch } from "./search-tools";
 // gemini-2.5-flash — thinking disabled via providerOptions in generateText
 const model = google("gemini-2.5-flash");
 
+// Timeout limits for Gemini generateText calls (prevents indefinite hangs)
+const PASS_1_TIMEOUT_MS = 30_000;
+const PASS_2_TIMEOUT_MS = 25_000;
+
 export interface AgentContext {
   telegramId: string;
   chatId: string;
@@ -364,6 +368,20 @@ export async function processMessage(
     }),
   };
 
+  // Helper: wrap a promise with a timeout to prevent indefinite Gemini hangs
+  const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(`[Agent] ${label} timed out after ${ms / 1000}s`)),
+        ms,
+      );
+      promise.then(
+        (v) => { clearTimeout(timer); resolve(v); },
+        (e) => { clearTimeout(timer); reject(e); },
+      );
+    });
+  };
+
   let result: any;
   try {
     // Pass 1: Gemini decides what to do — tools have NO execute so SDK won't auto-run them
@@ -396,13 +414,17 @@ export async function processMessage(
     console.log(
       `[Agent] Pass 1: Sending ${currentMessages.length} messages to Gemini`,
     );
-    result = await generateText({
-      model,
-      system: systemPrompt,
-      messages: currentMessages,
-      tools: declarationTools,
-      providerOptions: { google: { thinkingConfig: { thinkingBudget: 1024 } } },
-    });
+    result = await withTimeout(
+      generateText({
+        model,
+        system: systemPrompt,
+        messages: currentMessages,
+        tools: declarationTools,
+        providerOptions: { google: { thinkingConfig: { thinkingBudget: 1024 } } },
+      }),
+      PASS_1_TIMEOUT_MS,
+      "Pass 1",
+    );
     console.log(
       `[Agent] Pass 1 done | Text: ${result.text?.length || 0} chars | ToolCalls: ${result.toolCalls?.length || 0}`,
     );
@@ -467,12 +489,16 @@ export async function processMessage(
         { role: "tool" as const, content: toolResultParts },
       ];
       console.log(`[Agent] Pass 2: Sending ${pass2Messages.length} messages`);
-      result = await generateText({
-        model,
-        system: systemPrompt,
-        messages: pass2Messages,
-        providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
-      });
+      result = await withTimeout(
+        generateText({
+          model,
+          system: systemPrompt,
+          messages: pass2Messages,
+          providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+        }),
+        PASS_2_TIMEOUT_MS,
+        "Pass 2",
+      );
       console.log(
         `[Agent] Pass 2 done | Text: ${result.text?.length || 0} chars`,
       );

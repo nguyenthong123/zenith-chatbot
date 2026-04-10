@@ -58,11 +58,10 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
 
   bot.command("profile", (ctx: any) => {
     const { user, isGuest } = ctx.state;
-    ctx.reply(`📊 **Thông tin tài khoản:**
-- Tên: ${user.name}
-- Email: ${user.email}
-- Chế độ: ${isGuest ? "GUEST (Khách)" : "CHÍNH THỨC"}
-- ID Telegram: ${ctx.state.telegramId}`);
+    ctx.reply(
+      `📊 <b>Thông tin tài khoản:</b>\n- Tên: ${user.name}\n- Email: ${user.email}\n- Chế độ: ${isGuest ? "GUEST (Khách)" : "CHÍNH THỨC"}\n- ID Telegram: ${ctx.state.telegramId}`,
+      { parse_mode: "HTML" },
+    );
   });
 
   bot.command("login", async (ctx: any) => {
