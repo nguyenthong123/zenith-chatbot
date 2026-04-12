@@ -1,18 +1,15 @@
-import type {
-  UIMessage,
-  UIMessagePart,
-} from 'ai';
-import { type ClassValue, clsx } from 'clsx';
-import { formatISO } from 'date-fns';
-import { twMerge } from 'tailwind-merge';
-import type { DBMessage, Document } from '@/lib/db/schema';
-import { ChatbotError, type ErrorCode } from './errors';
+import type { UIMessage, UIMessagePart } from "ai";
+import { type ClassValue, clsx } from "clsx";
+import { formatISO } from "date-fns";
+import { twMerge } from "tailwind-merge";
+import type { DBMessage, Document } from "@/lib/db/schema";
+import { ChatbotError, type ErrorCode } from "./errors";
 import type {
   Attachment,
   ChatMessage,
   ChatTools,
   CustomUIDataTypes,
-} from './types';
+} from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -43,8 +40,8 @@ export async function fetchWithErrorHandlers(
 
     return response;
   } catch (error: unknown) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      throw new ChatbotError('offline:chat');
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      throw new ChatbotError("offline:chat");
     }
 
     throw error;
@@ -75,8 +72,7 @@ export function generateStableUUID(input: string): string {
 
   const hex = Math.abs(hash).toString(16).padEnd(32, "0");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(12, 15)}-${(
-    (parseInt(hex.slice(15, 16), 16) & 0x3) |
-    0x8
+    (parseInt(hex.slice(15, 16), 16) & 0x3) | 0x8
   ).toString(16)}${hex.slice(16, 19)}-${hex.slice(19, 31)}`;
 }
 
@@ -84,20 +80,24 @@ export function getDocumentTimestampByIndex(
   documents: Document[],
   index: number,
 ) {
-  if (!documents) { return new Date(); }
-  if (index > documents.length) { return new Date(); }
+  if (!documents) {
+    return new Date();
+  }
+  if (index > documents.length) {
+    return new Date();
+  }
 
   return documents[index].createdAt;
 }
 
 export function sanitizeText(text: string) {
-  return text.replace('<has_function_call>', '');
+  return text.replace("<has_function_call>", "");
 }
 
 export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
   return messages.map((message) => ({
     id: message.id,
-    role: message.role as 'user' | 'assistant' | 'system',
+    role: message.role as "user" | "assistant" | "system",
     parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
     attachments: (message.attachments as Attachment[]) ?? [],
     metadata: {
@@ -108,7 +108,7 @@ export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
 
 export function getTextFromMessage(message: ChatMessage | UIMessage): string {
   return message.parts
-    .filter((part) => part.type === 'text')
-    .map((part) => (part as { type: 'text'; text: string}).text)
-    .join('');
+    .filter((part) => part.type === "text")
+    .map((part) => (part as { type: "text"; text: string }).text)
+    .join("");
 }

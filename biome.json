@@ -6,9 +6,7 @@
     }
   },
   "files": {
-    "includes": [
-      "**/*"
-    ]
+    "includes": ["**/*"]
   },
   "formatter": {
     "enabled": true,
@@ -27,12 +25,12 @@
         "noSvgWithoutTitle": "off"
       },
       "complexity": {
+        "noCommaOperator": "off",
         "noExcessiveCognitiveComplexity": "off",
+        "useLiteralKeys": "off",
         "useSimplifiedLogicExpression": "off"
       },
       "correctness": {
-        "noUnusedImports": "warn",
-        "noUnusedVariables": "warn",
         "useImageSize": "off",
         "useUniqueElementIds": "off"
       },
@@ -45,7 +43,9 @@
         "noMagicNumbers": "off",
         "noNestedTernary": "off",
         "useConsistentTypeDefinitions": "off",
-        "useNamingConvention": "off"
+        "useNamingConvention": "off",
+        "useNodejsImportProtocol": "off",
+        "useTemplate": "off"
       },
       "suspicious": {
         "noBitwiseOperators": "off",

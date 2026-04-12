@@ -69,7 +69,7 @@ export async function runCommand(command: string) {
         stderr = error.stderr;
       }
     }
-    
+
     return {
       stdout: stdout,
       stderr: stderr || message,

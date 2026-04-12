@@ -1,15 +1,6 @@
 "use client";
 
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
-import type { ComponentProps, ReactNode } from "react";
-
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
 import {
   CheckCircleIcon,
   ChevronDownIcon,
@@ -18,7 +9,15 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 import { CodeBlock } from "./code-block";
 
@@ -87,7 +86,7 @@ export const ToolHeader = ({
     <CollapsibleTrigger
       className={cn(
         "flex w-full items-center justify-between gap-4 p-3",
-        className
+        className,
       )}
       {...props}
     >
@@ -107,7 +106,7 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   <CollapsibleContent
     className={cn(
       "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 space-y-4 p-4 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
-      className
+      className,
     )}
     {...props}
   />
@@ -161,7 +160,7 @@ export const ToolOutput = ({
       <div
         className={cn(
           "overflow-x-auto rounded-md text-xs [&_table]:w-full",
-          errorText && "bg-destructive/10 text-destructive"
+          errorText && "bg-destructive/10 text-destructive",
         )}
       >
         {errorText && <div>{errorText}</div>}

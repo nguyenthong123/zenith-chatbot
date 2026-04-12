@@ -460,16 +460,16 @@ export async function processMessage(
           messages: currentMessages,
         } as any;
         if (tc.toolName === "webSearch") {
-          toolOutput = await allTools.webSearch.execute!(args, toolOpts);
+          toolOutput = await allTools.webSearch.execute?.(args, toolOpts);
         } else if (tc.toolName === "productLookup") {
-          toolOutput = await allTools.productLookup.execute!(args, toolOpts);
+          toolOutput = await allTools.productLookup.execute?.(args, toolOpts);
         } else if (tc.toolName === "updateProductImage") {
-          toolOutput = await allTools.updateProductImage.execute!(
+          toolOutput = await allTools.updateProductImage.execute?.(
             args,
             toolOpts,
           );
         } else if (tc.toolName === "saveProduct") {
-          toolOutput = await allTools.saveProduct.execute!(args, toolOpts);
+          toolOutput = await allTools.saveProduct.execute?.(args, toolOpts);
         } else {
           toolOutput = { error: `Unknown tool: ${tc.toolName}` };
         }
