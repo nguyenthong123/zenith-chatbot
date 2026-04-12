@@ -49,8 +49,8 @@
       },
       "suspicious": {
         "noBitwiseOperators": "off",
-        "noConsole": "warn",
-        "noExplicitAny": "warn",
+        "noConsole": "off",
+        "noExplicitAny": "off",
         "noShadowRestrictedNames": "off",
         "noUnknownAtRules": "off"
       }
