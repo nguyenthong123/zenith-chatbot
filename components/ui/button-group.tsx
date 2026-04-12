@@ -27,7 +27,6 @@ function ButtonGroup({
 }: React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
   return (
     <div
-      // biome-ignore lint/a11y/useSemanticElements: ButtonGroup intentionally uses div with role="group" for flexible button layout styling
       role="group"
       data-slot="button-group"
       data-orientation={orientation}

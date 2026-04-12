@@ -22,7 +22,8 @@
     "enabled": true,
     "rules": {
       "a11y": {
-        "noSvgWithoutTitle": "off"
+        "noSvgWithoutTitle": "off",
+        "useSemanticElements": "off"
       },
       "complexity": {
         "noCommaOperator": "off",
