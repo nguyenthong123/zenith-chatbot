@@ -6,14 +6,8 @@
     }
   },
   "files": {
-    "includes": ["**/*"],
-    "ignores": [
-      ".next/**",
-      "components/ai-elements",
-      "components/elements",
-      "components/ui",
-      "lib/utils.ts",
-      "hooks/use-mobile.ts"
+    "includes": [
+      "**/*"
     ]
   },
   "formatter": {
