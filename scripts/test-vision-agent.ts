@@ -4,7 +4,6 @@ import * as dotenv from "dotenv";
 // Load ENV first
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-import * as dbQueries from "../lib/db/queries";
 import { processMessage } from "../tools/telegram-agent/agent";
 
 async function testVision() {
@@ -41,8 +40,8 @@ async function testVision() {
     console.log("-------------------\n");
 
     if (
-      (response.text && response.text.toLowerCase().includes("giày")) ||
-      response.text.toLowerCase().includes("nike")
+      response.text?.toLowerCase().includes("giày") ||
+      response.text?.toLowerCase().includes("nike")
     ) {
       console.log("✅ Success: AI correctly identified the image content.");
     } else {

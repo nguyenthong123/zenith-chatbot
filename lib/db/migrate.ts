@@ -39,7 +39,6 @@ const runMigrate = async () => {
         ? (err as Error & { code: string }).code
         : undefined;
     if (!code || !idempotentCodes.has(code)) {
-      // biome-ignore lint/suspicious/noConsole: migration script requires console for error reporting before process.exit
       console.error(err);
       process.exit(1);
     }
@@ -50,7 +49,6 @@ const runMigrate = async () => {
 };
 
 runMigrate().catch((err) => {
-  // biome-ignore lint/suspicious/noConsole: migration script requires console for error reporting before process.exit
   console.error(err);
   process.exit(1);
 });

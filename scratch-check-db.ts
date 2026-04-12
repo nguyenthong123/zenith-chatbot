@@ -32,7 +32,9 @@ async function checkDatabase() {
         console.log("URLs list:");
         p.imageUrls
           ?.split(",")
-          .forEach((url, i) => console.log(`${i + 1}: ${url.trim()}`));
+          .forEach((url, i) => {
+            console.log(`${i + 1}: ${url.trim()}`);
+          });
       }
     } else {
       console.log("Product 'Tấm DURAFlex 14mm' not found.");

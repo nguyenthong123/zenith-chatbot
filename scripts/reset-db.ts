@@ -5,7 +5,6 @@ dotenv.config();
 
 const directUrl = process.env.DIRECT_URL;
 if (!directUrl) {
-  // biome-ignore lint/suspicious/noConsole: script error reporting
   console.error("DIRECT_URL environment variable is required");
   process.exit(1);
 }

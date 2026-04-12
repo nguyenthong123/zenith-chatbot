@@ -28,5 +28,4 @@ async function analyzeCustomers() {
   });
 }
 
-// biome-ignore lint/suspicious/noConsole: script entry point
 analyzeCustomers().catch(console.error);
