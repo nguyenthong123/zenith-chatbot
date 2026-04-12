@@ -4,6 +4,7 @@ import {
   processMessage,
 } from "../../tools/telegram-agent/agent";
 import cloudinary from "../cloudinary";
+import { saveDocument } from "../db/queries"; // Import saveDocument
 import * as tgQueries from "../db/telegram-queries";
 
 export function setupBot(bot: Telegraf<Context>) {
@@ -110,6 +111,21 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       const uploadRes = await cloudinary.uploader.upload(link.href, {
         folder: "telegram_uploads",
       });
+
+      // Save the image URL to the database
+      const userId = ctx.state.user?.id;
+      if (userId) {
+        await saveDocument({
+          id: photo.file_id, // Using file_id as a unique ID for the document
+          title: `Telegram Photo from ${ctx.from.first_name}`,
+          kind: "image",
+          content: uploadRes.secure_url,
+          userId: userId,
+        });
+        console.log(`Image URL saved to DB: ${uploadRes.secure_url}`);
+      } else {
+        console.warn("User ID not found, skipping image URL save to DB.");
+      }
 
       const context: AgentContext = {
         chatId: ctx.state.chatId,
@@ -245,7 +261,10 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
         .replace(/<br(\s[^>]*)?\/?>/gi, "\n") // <br> → newline
         .replace(/<hr(\s[^>]*)?\/?>/gi, "\n───\n") // <hr> → separator
         .replace(/<img[^>]*>/gi, "") // Strip images
-        .replace(/<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi, ""); // Strip dangerous/unsupported tags
+        .replace(
+          /<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi,
+          "",
+        ); // Strip dangerous/unsupported tags
 
       // Step C: Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
       // Telegram supports: b, strong, i, em, u, ins, s, strike, del, a, code, pre, blockquote
