@@ -55,10 +55,24 @@ export async function runCommand(command: string) {
       stdout: stdout || "Success (no output)",
       stderr: stderr || null,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    let stdout = null;
+    let stderr = null;
+    let message = "Unknown error";
+
+    if (error instanceof Error) {
+      message = error.message;
+      if ("stdout" in error && typeof error.stdout === "string") {
+        stdout = error.stdout;
+      }
+      if ("stderr" in error && typeof error.stderr === "string") {
+        stderr = error.stderr;
+      }
+    }
+    
     return {
-      stdout: error.stdout || null,
-      stderr: error.stderr || error.message,
+      stdout: stdout,
+      stderr: stderr || message,
     };
   }
 }
