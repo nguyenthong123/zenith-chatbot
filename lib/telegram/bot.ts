@@ -240,11 +240,14 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
         }
       }
 
+      // 2. Standard Text Reply with Robust HTML Sanitation
+      let rawText = response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
+
       // Fallback xử lý ảnh từ markdown trả về
-      if (response.text) {
+      if (rawText) {
         const imgRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
         let match;
-        while ((match = imgRegex.exec(response.text)) !== null) {
+        while ((match = imgRegex.exec(rawText)) !== null) {
           try {
             await ctx.replyWithPhoto(match[1]);
           } catch (e) {
@@ -252,12 +255,8 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
           }
         }
         // Xoá ảnh khỏi text để tránh lỗi parse HTML
-        response.text = response.text.replace(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/g, "");
+        rawText = rawText.replace(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/g, "");
       }
-
-      // 2. Standard Text Reply with Robust HTML Sanitation
-      const rawText =
-        response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
 
       // Step A: Convert Markdown formatting to HTML (Gemini sometimes mixes formats)
       let sanitizedText = rawText
