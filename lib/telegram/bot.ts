@@ -173,6 +173,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       };
 
       const response = await processMessage(userMessage, context);
+      console.log("[DEBUG-TEXT] AI Response generated:", !!response);
 
       // Handle Auth Actions requested by AI
       if (response.authAction) {
