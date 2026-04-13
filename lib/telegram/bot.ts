@@ -140,6 +140,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       const response = await processMessage(aiMsg, context, [
         { url: uploadRes.secure_url, contentType: "image/jpeg" },
       ]);
+      console.log("[DEBUG-PHOTO] response received:", !!response, !!response.response);
 
       await ctx.reply(
         response.text ||
