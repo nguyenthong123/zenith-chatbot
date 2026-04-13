@@ -148,7 +148,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       );
     } catch (error: any) {
       console.error("Photo Error:", error);
-      ctx.reply("Lỗi khi xử lý hình ảnh.");
+      ctx.reply(`❌ Lỗi hình ảnh: ${error.message || error}`);
     }
   });
 
@@ -311,7 +311,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       }
     } catch (error: any) {
       console.error("Agent Error:", error);
-      await ctx.reply(`❌ Hệ thống đang bận. Vui lòng thử lại sau giây lát.`);
+      await ctx.reply(`❌ Lỗi hệ thống: ${error.message || error}`);
     }
   });
 
