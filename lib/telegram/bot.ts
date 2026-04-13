@@ -150,6 +150,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
     } catch (error: any) {
       console.error("Photo Error:", error);
       ctx.reply(`❌ Lỗi hình ảnh: ${error.message || error}`);
+      console.log("[DEBUG-PHOTO] End of Photo Handler");
     }
   });
 
@@ -282,6 +283,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
         .replace(
           /<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi,
           "",
+      console.log("[DEBUG-TEXT] End of Text Handler");
         ); // Strip dangerous/unsupported tags
 
       // Step C: Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
