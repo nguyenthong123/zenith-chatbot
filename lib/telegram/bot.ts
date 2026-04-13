@@ -116,7 +116,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       const userId = ctx.state.user?.id;
       if (userId) {
         await saveDocument({
-          id: photo.file_id, // Using file_id as a unique ID for the document
+          id: require('crypto').randomUUID(), // Using random UUID instead of file_id
           title: `Telegram Photo from ${ctx.from.first_name}`,
           kind: "image",
           content: uploadRes.secure_url,
@@ -238,6 +238,21 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
             }
           }
         }
+      }
+
+      // Fallback xử lý ảnh từ markdown trả về
+      if (response.text) {
+        const imgRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+        let match;
+        while ((match = imgRegex.exec(response.text)) !== null) {
+          try {
+            await ctx.replyWithPhoto(match[1]);
+          } catch (e) {
+            console.error("Fallback photo delivery failed:", e);
+          }
+        }
+        // Xoá ảnh khỏi text để tránh lỗi parse HTML
+        response.text = response.text.replace(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/g, "");
       }
 
       // 2. Standard Text Reply with Robust HTML Sanitation
