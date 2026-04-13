@@ -227,6 +227,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
                 ) {
                   console.log(
                     `[Bot] Auto-delivering photo from tool result: ${out.photoUrl}`,
+                  console.log("[DEBUG] Found photoUrl:", out.photoUrl);
                   );
                   try {
                     await ctx.replyWithPhoto(out.photoUrl);
@@ -246,6 +247,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       // Fallback xử lý ảnh từ markdown trả về
       if (rawText) {
         const imgRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+          console.log("[DEBUG] Found Regex Match:", match[1]);
         let match;
         while ((match = imgRegex.exec(rawText)) !== null) {
           try {
