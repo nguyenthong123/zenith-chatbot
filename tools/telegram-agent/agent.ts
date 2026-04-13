@@ -323,7 +323,7 @@ export async function processMessage(
         const img = p.imageUrls ? p.imageUrls.split(",")[0].trim() : null;
         return {
           success: true,
-          message: `📦 Sản phẩm: <b>${p.name}</b>\n💰 Giá: ${p.priceSell?.toLocaleString()} VNĐ\n📉 Tồn kho: ${p.stock}`,
+          message: `📦 Sản phẩm: <b>${p.name}</b>\n💰 Giá: ${(p.priceSell || 0).toLocaleString()} VNĐ\n📉 Tồn kho: ${p.stock}`,
           photoUrl: img,
         };
       },
