@@ -116,7 +116,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       const userId = ctx.state.user?.id;
       if (userId) {
         await saveDocument({
-          id: require('crypto').randomUUID(), // Using random UUID instead of file_id
+          id: require("crypto").randomUUID(), // Using random UUID instead of file_id
           title: `Telegram Photo from ${ctx.from.first_name}`,
           kind: "image",
           content: uploadRes.secure_url,
@@ -140,7 +140,11 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       const response = await processMessage(aiMsg, context, [
         { url: uploadRes.secure_url, contentType: "image/jpeg" },
       ]);
-      console.log("[DEBUG-PHOTO] response received:", !!response, !!response.response);
+      console.log(
+        "[DEBUG-PHOTO] response received:",
+        !!response,
+        !!response.response,
+      );
 
       await ctx.reply(
         response.text ||
@@ -207,7 +211,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
 
       // 1. Automatic Native Media Delivery from Tool Results
       // SDK v6: output = { type: 'json', value: { photoUrl: ... } }
-      if (response && response.response && response.response.messages) {
+      if (response?.response?.messages) {
         for (const msg of response.response.messages) {
           if (
             (msg.role === "tool" || msg.role === "assistant") &&
@@ -230,8 +234,8 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
                 ) {
                   console.log(
                     `[Bot] Auto-delivering photo from tool result: ${out.photoUrl}`,
-                  console.log("[DEBUG] Found photoUrl:", out.photoUrl);
                   );
+                  console.log("[DEBUG] Found photoUrl:", out.photoUrl);
                   try {
                     await ctx.replyWithPhoto(out.photoUrl);
                   } catch (photoErr) {
@@ -245,19 +249,21 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
       }
 
       // 2. Standard Text Reply with Robust HTML Sanitation
-      let rawText = response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
+      let rawText =
+        response.text || "💎 [Diamond AI] Đã xử lý yêu cầu của bạn.";
 
       // Fallback xử lý ảnh từ markdown trả về
       if (rawText) {
         const imgRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+        let match: RegExpExecArray | null = imgRegex.exec(rawText);
+        while (match !== null) {
           console.log("[DEBUG] Found Regex Match:", match[1]);
-        let match;
-        while ((match = imgRegex.exec(rawText)) !== null) {
           try {
             await ctx.replyWithPhoto(match[1]);
           } catch (e) {
             console.error("Fallback photo delivery failed:", e);
           }
+          match = imgRegex.exec(rawText);
         }
         // Xoá ảnh khỏi text để tránh lỗi parse HTML
         rawText = rawText.replace(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/g, "");
@@ -283,8 +289,8 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
         .replace(
           /<\/?(?:script|style|iframe|object|embed|form|input|button|select|textarea|label|fieldset|legend|details|summary|dialog|menu|menuitem)[^>]*>/gi,
           "",
-      console.log("[DEBUG-TEXT] End of Text Handler");
         ); // Strip dangerous/unsupported tags
+      console.log("[DEBUG-TEXT] End of Text Handler");
 
       // Step C: Strip ALL tags EXCEPT Telegram-supported ones (whitelist approach)
       // Telegram supports: b, strong, i, em, u, ins, s, strike, del, a, code, pre, blockquote
