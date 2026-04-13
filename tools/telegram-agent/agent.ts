@@ -554,6 +554,7 @@ export async function processMessage(
   } catch (_e: any) {
     console.warn("[Agent] Persistence skipped:", _e.message);
   }
+  console.log("[DEBUG] Agent Returning Result:", JSON.stringify(result, null, 2).slice(0, 500));
 
   return result;
 }
