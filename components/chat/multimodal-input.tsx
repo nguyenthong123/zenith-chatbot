@@ -216,11 +216,10 @@ function PureMultimodalInput({
   const [slashIndex, setSlashIndex] = useState(0);
 
   const submitForm = useCallback(() => {
-    window.history.pushState(
-      {},
-      "",
-      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`,
-    );
+    const targetPath = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, "", targetPath);
+    }
 
     sendMessage({
       role: "user",
