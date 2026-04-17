@@ -46,6 +46,7 @@ import { generateStatus } from "@/lib/ai/tools/status";
 import { syncFirestoreToSupabase } from "@/lib/ai/tools/sync-firestore";
 import { getSystemInfo } from "@/lib/ai/tools/system-info";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { getManageUserMemory } from "@/lib/ai/tools/user-memory";
 import { getUserLookup } from "@/lib/ai/tools/user-lookup";
 import { getManageUserMemory } from "@/lib/ai/tools/user-memory";
 import { webSearch } from "@/lib/ai/tools/web-search";
