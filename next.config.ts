@@ -1,6 +1,8 @@
 import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
 
+process.env.TZ = "Asia/Ho_Chi_Minh";
+
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 
 const nextConfig: NextConfig = {
