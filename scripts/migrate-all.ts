@@ -43,7 +43,6 @@ async function migrateCollection(
     id: string,
     data: Record<string, unknown>,
   ) => Record<string, unknown>,
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic Drizzle table reference
   table: any,
   onConflictTarget?: any,
 ) {

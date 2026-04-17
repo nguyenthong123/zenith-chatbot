@@ -225,7 +225,7 @@ export async function processMessage(
     const hasToolCall =
       Array.isArray(msg.content) &&
       msg.content.some((p: any) => p.type === "tool-call");
-    const hasToolResult =
+    const _hasToolResult =
       Array.isArray(msg.content) &&
       msg.content.some((p: any) => p.type === "tool-result");
     const prev = validatedHistory[validatedHistory.length - 1];

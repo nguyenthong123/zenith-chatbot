@@ -207,7 +207,7 @@ Gõ /login <email> <password> để liên kết tài khoản chính thức.`);
 
       // 1. Automatic Native Media Delivery from Tool Results
       // SDK v6: output = { type: 'json', value: { photoUrl: ... } }
-      if (response && response.response && response.response.messages) {
+      if (response?.response?.messages) {
         for (const msg of response.response.messages) {
           if (
             (msg.role === "tool" || msg.role === "assistant") &&

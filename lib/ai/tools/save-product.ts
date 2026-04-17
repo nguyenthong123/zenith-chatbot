@@ -34,7 +34,7 @@ export const getSaveProductTool = (userId: string, userEmail?: string) =>
         const finalImageUrls: string[] = [];
 
         if (imageUrls && imageUrls.length > 0) {
-          const storageConfigured =
+          const _storageConfigured =
             !!(
               process.env.CLOUDINARY_API_KEY &&
               process.env.CLOUDINARY_API_SECRET

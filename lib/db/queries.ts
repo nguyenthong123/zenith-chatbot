@@ -1021,7 +1021,7 @@ export async function upsertProduct(data: {
 
   if (existing.length > 0) {
     const p = existing[0];
-    const oldImages =
+    const _oldImages =
       p.imageUrls
         ?.split(",")
         .map((i: string) => i.trim())

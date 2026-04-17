@@ -228,7 +228,7 @@ export const ReasoningContent = memo(
       if (isStreaming && scrollRef.current) {
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }
-    }, [children, isStreaming]);
+    }, [isStreaming]);
 
     if (!isOpen) return null;
 

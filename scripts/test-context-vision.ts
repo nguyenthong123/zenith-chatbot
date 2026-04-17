@@ -75,7 +75,7 @@ async function testContextVision() {
       for (const tc of result.toolCalls) {
         if (tc.toolName === "updateProductImage") {
           const args = (tc as any).args || (tc as any).input;
-          if (args && args.imageUrls && args.imageUrls.includes(imageUrl)) {
+          if (args?.imageUrls?.includes(imageUrl)) {
             console.log(
               "\n✅ SUCCESS: AI correctly picked up the image URL from history!",
             );
